@@ -120,10 +120,7 @@ export function StackedHorizontalBarChart({ data, dataByEntity, onItemClick, sel
         const unfilledX  = x0 + totalW;
         const unfilledW  = animTrackW - totalW;
         if (unfilledW > 2) {
-          const unGrad = ctx.createLinearGradient(unfilledX, 0, x0 + animTrackW, 0);
-          unGrad.addColorStop(0, rgb(CC.tealDark, 0.55));
-          unGrad.addColorStop(1, rgb(CC.tealDark, 0.22));
-          ctx.fillStyle = unGrad;
+          ctx.fillStyle = rgb(CC.barBg, 0.2);
           ctx.beginPath();
           ctx.rect(unfilledX, y, unfilledW, BAR_H);
           ctx.fill();

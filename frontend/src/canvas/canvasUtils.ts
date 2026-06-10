@@ -19,6 +19,7 @@ export const CC = {
   amber:    '#EEBF3B',
   teal:     '#69DFE9',
   tealDark: '#00818F',
+  barBg:    '#7DB9DF',
   t1:       '#F7F9FA',
   t2:       '#B3B5B6',
   t3:       '#94979C',
@@ -57,8 +58,29 @@ export const SOLID = {
 
 export const PALETTE = [CC.blue, CC.amber, CC.purple, CC.green, CC.red];
 
-/** Per-chart offset palette — offset 0 keeps the default teal, 1+ cycles through alternates */
-export const CHART_PALETTE = [CC.teal, CC.purple, CC.amber, CC.blue, CC.green] as const;
+/** Gradient pairs for per-item bar gradients — [dark start, bright end] */
+export const GRAD_PALETTE = [
+  GRAD.teal,    // #00818F → #69DFE9
+  GRAD.violet,  // #5B3CB1 → #C8B6F3
+  GRAD.mint,    // #27837A → #81E8CE
+  GRAD.magenta, // #8732A7 → #E7A1F0
+  GRAD.sky,     // #0068BE → #8EC2F6
+  GRAD.blue,    // #084CF0 → #8BA9FF
+  GRAD.royal,   // #2556C8 → #A9B1F8
+  GRAD.purple,  // #5C42B8 → #9DA5FD
+] as const;
+
+/** Per-chart offset palette — 8-step sequence cycling through the design-system palette */
+export const CHART_PALETTE = [
+  SOLID.teal,    // #69DFE9
+  SOLID.violet,  // #C8B6F3
+  SOLID.mint,    // #81E8CE
+  SOLID.magenta, // #E7A1F0
+  SOLID.sky,     // #0068BE
+  SOLID.blue,    // #084CF0
+  SOLID.royal,   // #2556C8
+  SOLID.purple,  // #5C42B8
+] as const;
 
 
 // --- Typography tokens ---

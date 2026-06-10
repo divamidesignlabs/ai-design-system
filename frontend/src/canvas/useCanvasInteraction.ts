@@ -115,11 +115,9 @@ export function useCanvasInteraction(
 
     const handleLeave = () => {
       mouseRef.current = { x: -1, y: -1, over: false };
-      if (hoveredRef.current) {
-        hoveredRef.current = null;
-        canvas.style.cursor = 'default';
-        hideTooltip();
-      }
+      hoveredRef.current = null;
+      canvas.style.cursor = 'default';
+      hideTooltip();
     };
 
     const handleClick = () => {

@@ -3,7 +3,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
-import { CC, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, setupCanvas } from '../../canvas/canvasUtils';
+import { CC, AXIS_LABEL, rgb, drawGlow, setupCanvas } from '../../canvas/canvasUtils';
 import { easeOutBack, easeOutCubic } from '../../canvas/easing';
 import type { BalanceScaleChartProps } from './types';
 
@@ -162,8 +162,8 @@ export function BalanceScaleChart({ left, right, leftTitle = 'Accepted', rightTi
       const leftPanH  = Math.max(20, (absLeft  / maxVal) * 95 * progress);
       const rightPanH = Math.max(20, (absRight / maxVal) * 95 * progress);
 
-      const leftDim  = selectedIdRef.current === 'right' ? 0.2 : 1;
-      const rightDim = selectedIdRef.current === 'left'  ? 0.2 : 1;
+      const leftDim  = selectedIdRef.current === 'right' ? 0.6 : 1;
+      const rightDim = selectedIdRef.current === 'left'  ? 0.6 : 1;
 
       drawPan(CC.green, leftEnd.x,  leftEnd.y,  leftPanH,  progress * leftDim);
       drawPan(CC.amber, rightEnd.x, rightEnd.y, rightPanH, progress * rightDim);

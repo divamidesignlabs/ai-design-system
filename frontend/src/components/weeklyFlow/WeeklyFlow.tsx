@@ -231,7 +231,16 @@ export function WeeklyFlow({
         registerHitRect(hitZonesRef.current, c.id, cn.x, cn.y, nodeW, cn.h, {
           label: c.name,
           value: c.totalLabel ?? String(c.total ?? 0),
-          sublabel: `${c.baseLabel ?? String(c.base ?? 0)} + ${c.variationLabel ?? String(c.variation ?? 0)}`,
+          sublabel: (() => {
+            const b = c.base ?? 0;
+            const v = c.variation ?? 0;
+            const bStr = c.baseLabel ?? formatNumber(b);
+            const vStr = c.variationLabel ?? formatNumber(v);
+            if (b !== 0 && v !== 0) return `${bStr} + ${vStr}`;
+            if (b !== 0) return bStr;
+            if (v !== 0) return vStr;
+            return undefined;
+          })(),
           color: cn.color,
         });
 

@@ -66,9 +66,9 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
     const splitX = rootX + rootR + 60; // single stem ends here, branches fan out from this point
     const leafX = W - 140;
     const maxCount = Math.max(...byContractor.map(c => c.count ?? 0), 1);
-    const maxLeafR = 22;
-    const minLeafR = 8;
-    const leafSpacing = byContractor.length > 1 ? (fanH - 60) / (byContractor.length - 1) : 0;
+    const leafSpacing = byContractor.length > 1 ? (fanH - 60) / (byContractor.length - 1) : 60;
+    const maxLeafR = Math.min(22, leafSpacing / 2 - 3);
+    const minLeafR = Math.min(8, Math.max(3, maxLeafR - 6));
     const leafStartY = 30;
     const labelX = leafX + maxLeafR + 10; // fixed left-align for all leaf labels
 
@@ -111,7 +111,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
         const localP = stagger(progress, i, byContractor.length, easeOutCubic);
         const lpos = leafPositions[i];
         const hp = hoverMap.current.get(c.id) ?? 0;
-        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.15 : 1;
+        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.6 : 1;
 
         if (localP < 0.01) return;
 
@@ -195,7 +195,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
       if (progress > 0.4) {
         const fade = Math.min(1, (progress - 0.4) / 0.4);
         ctx.globalAlpha = fade;
-        const fullValue = activeTotalLabel ?? formatNumber(activeTotal, 0);
+        const fullValue = formatNumber(activeTotal);
         const maxTextW = rootR * 1.7;
         ctx.font = `500 16px 'Satoshi Variable', 'DM Sans', sans-serif`;
         let truncated = fullValue;
@@ -213,7 +213,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
 
       registerHitCircle(hitZonesRef.current, '__root__', rootX, rootY, rootR, {
         label: activeTotalLabel ?? 'Total',
-        value: formatNumber(activeTotal, 0),
+        value: formatNumber(activeTotal),
         sublabel: `${byContractor.length} items`,
         color,
       });

@@ -16,5 +16,7 @@ export function formatNumber(value: number, precision: number = 1): string {
         }
     }
 
-    return `${sign}${abs.toFixed(0)}`;
+    if (precision === 0) return `${sign}${Math.round(abs)}`;
+    // parseFloat strips trailing zeros: "5.20" → 5.2, "5.00" → 5
+    return `${sign}${parseFloat(abs.toFixed(precision))}`;
 }

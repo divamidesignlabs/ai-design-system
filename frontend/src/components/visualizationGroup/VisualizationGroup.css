@@ -30,18 +30,30 @@
 
 .viz-group__reset-btn {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.55);
+  color: #69DFE9;
   cursor: pointer;
-  font-size: 11px;
-  padding: 2px 8px;
-  transition: border-color 0.15s, color 0.15s;
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0px;
+  text-align: center;
+  padding: 0px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s, opacity 0.15s;
 }
 
 .viz-group__reset-btn:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: rgba(255, 255, 255, 0.9);
+  border-color: #69DFE9;
+  opacity: 0.8;
+}
+
+.viz-group__reset-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 /* ── Side-by-side chart row ── */
@@ -49,30 +61,34 @@
   display: flex;
   flex-direction: row;
   gap: 0;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   width: 100%;
+  position: relative;
 }
 
 .viz-group__chart {
   flex: 1 1 0;
   min-width: 0;
   padding: 16px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .viz-group__chart--listener {
-  align-self: stretch;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-/* Balance scale broadcaster: no right gap, extra bottom padding holds the L-path inside the div */
+/* Balance scale broadcaster: no right gap so the L-path meets the connector column flush */
 .viz-group__chart--balance-scale-chart:not(.viz-group__chart--listener) {
   padding-right: 0;
-  padding-bottom: 48px;
-  position: relative;
 }
 
-/* Route SVG overlay — spans the broadcaster chart div, draws the L-path outside the canvas */
+/* Route SVG overlay — spans the full charts row, coordinates are container-relative */
 .viz-group__route-svg {
   position: absolute;
   top: 0;
@@ -85,13 +101,13 @@
 }
 
 .viz-group__listener-label {
-  height: 24px;
+  min-height: 24px;
   line-height: 24px;
   font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0px;
+  color: #B3B5B6;
   padding: 0 8px;
   white-space: nowrap;
   overflow: hidden;

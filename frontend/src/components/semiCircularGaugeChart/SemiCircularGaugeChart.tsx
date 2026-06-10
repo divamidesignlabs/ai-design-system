@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback } from 'react';
 
 import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
-import { setupCanvas, CHART_PALETTE } from '../../canvas/canvasUtils';
+import { setupCanvas, GRAD_PALETTE } from '../../canvas/canvasUtils';
 import { CC, AXIS_LABEL, LEGEND_LABEL, rgb, drawGlow } from '../../canvas/canvasUtils';
 import { easeOutBack, easeOutCubic } from '../../canvas/easing';
 import { formatNumber } from '../../utils/numberFormat';
@@ -12,8 +12,6 @@ const W = 480;
 const H = 310;
 const LINE_H = 18;
 
-// Dark companion for each CHART_PALETTE entry — used as gradient start / sector fill
-const CHART_PALETTE_DARK = ['#00818F', '#5C42B8', '#C87B0A', '#2563EB', '#166534'] as const;
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(' ');
@@ -55,9 +53,7 @@ export function SemiCircularGaugeChart({ confirmed, total, label, colorOffset = 
     const ctx = setupCanvas(canvas, W, H);
     frameRef.current = 0;
 
-    const idx = colorOffset % CHART_PALETTE.length;
-    const color = CHART_PALETTE[idx];
-    const colorDark = CHART_PALETTE_DARK[idx];
+    const [colorDark, color] = GRAD_PALETTE[colorOffset % GRAD_PALETTE.length];
 
     const DURATION = 80;
     const NEEDLE_DURATION = 72;

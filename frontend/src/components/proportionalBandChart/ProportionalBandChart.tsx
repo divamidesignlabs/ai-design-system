@@ -15,7 +15,6 @@ const DEFAULT_W  = 780;
 const H          = 340;
 const PAD_SIDE   = 28;
 const BAND_GAP   = 4;
-const MIN_BAND_W = 148;
 
 function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;

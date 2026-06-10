@@ -21,7 +21,7 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 
 const DEFAULT_W  = 680;
 const MAX_ITEMS  = 8;
-const BAR_H      = 6;
+const BAR_H      = 4;
 const INNER_GAP  = 8;
 const PAIR_H     = BAR_H * 2 + INNER_GAP;
 const PAIR_GAP   = 36;
@@ -115,7 +115,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         const unimplId = `${c.id}-un`;
         const hpImpl  = hoverMap.current.get(implId) ?? 0;
         const hpUn    = hoverMap.current.get(unimplId) ?? 0;
-        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.2 : 1;
+        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.6 : 1;
         const implW   = ((c.implemented   ?? 0) / maxVal) * trackW * localP;
         const unimplW = ((c.unimplemented ?? 0) / maxVal) * trackW * localP;
 
@@ -127,13 +127,13 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         ctx.fillText(truncate(ctx, c.abbreviation ?? c.name ?? '', padL - 16), padL - 8, pairY + PAIR_H / 2);
         ctx.textBaseline = 'alphabetic';
 
-        // Hit zone on name area
+        // Hit zone on name area — centerXOverride at bar tip for connector routing
         registerHitRect(hitZonesRef.current, implId, 0, pairY, padL, PAIR_H, {
           label: c.name ?? c.abbreviation ?? '',
           value: `${formatNumber((c.implemented ?? 0) + (c.unimplemented ?? 0))} total ${unit}`,
           sublabel: `${labelA}: ${formatNumber(c.implemented ?? 0)} · ${labelB}: ${formatNumber(c.unimplemented ?? 0)}`,
           color: CC.green,
-        });
+        }, undefined, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // ── Implemented bar (green) ─────────────────────────────────────────
         if (implW > 0) {
@@ -148,7 +148,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         }
         registerHitRect(hitZonesRef.current, implId, padL, yImpl, Math.max(implW, 1), BAR_H, {
           label: c.name, value: formatNumber(c.implemented ?? 0), color: CC.green,
-        });
+        }, pairY + PAIR_H / 2, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // Value label right of impl bar
         if (localP > 0.4) {
@@ -176,7 +176,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         }
         registerHitRect(hitZonesRef.current, unimplId, padL, yUniml, Math.max(unimplW, 1), BAR_H, {
           label: c.name, value: formatNumber(c.unimplemented ?? 0), color: CC.amber,
-        });
+        }, pairY + PAIR_H / 2, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // Value label right of uniml bar
         if (localP > 0.4) {

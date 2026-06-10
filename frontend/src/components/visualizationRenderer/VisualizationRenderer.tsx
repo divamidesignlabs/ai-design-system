@@ -20,8 +20,9 @@ import { TrendChart } from '../trendChart/TrendChart';
 import { SegmentedSplitBarChart } from '../segmentedSplitBarChart';
 import { WeeklyFlow } from '../weeklyFlow';
 import { HorizontalBarChart } from '../horizontalBarChart';
-import type { VisualizationRendererProps, ContractorRow, NCEContractorRow, VariationRow, HorizontalBarRow, EWOpenContractorRow, EWSeverityRow, QuotationTrendPoint } from '../../types';
+import type { VisualizationRendererProps, ContractorRow, NCEContractorRow, VariationRow, HorizontalBarRow, EWOpenContractorRow, EWSeverityRow, QuotationTrendPoint, SubentityItem } from '../../types';
 import { CHART_TYPE } from '../../constants';
+import { formatNumber } from '../../utils/numberFormat';
 
 export function VisualizationRenderer({ config, className, colorOffset = 0, onItemClick, selectedId, listenerItems }: VisualizationRendererProps) {
   // When acting as a listener, selectedId belongs to the broadcaster chart — don't pass it
@@ -74,7 +75,20 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
     const items = listenerItems ? listenerItems as VariationRow[] : config.items;
     return <SegmentedSplitBarChart items={items} itemsByEntity={config.itemsByEntity} labelA={config.labelA} labelB={config.labelB} unit={config.unit} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
   }
-  if (config.type === CHART_TYPE.BALANCE_SCALE) return <BalanceScaleChart left={config.left} right={config.right} leftTitle={config.leftTitle} rightTitle={config.rightTitle} unit={config.unit} dataByEntity={config.dataByEntity} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+  if (config.type === CHART_TYPE.BALANCE_SCALE) {
+    let left = config.left;
+    let right = config.right;
+    if (listenerItems && !Array.isArray(listenerItems)) {
+      const fan = listenerItems as { total: number; totalLabel: string; items: SubentityItem[] };
+      if (fan.items?.length >= 2) {
+        const lv = Number((fan.items[0] as Record<string, unknown>).count ?? 0);
+        const rv = Number((fan.items[1] as Record<string, unknown>).count ?? 0);
+        left  = { value: lv, count: 1, label: '£' + formatNumber(lv, 2) };
+        right = { value: rv, count: 1, label: '£' + formatNumber(rv, 2) };
+      }
+    }
+    return <BalanceScaleChart left={left} right={right} leftTitle={config.leftTitle} rightTitle={config.rightTitle} unit={config.unit} dataByEntity={config.dataByEntity} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+  }
   if (config.type === CHART_TYPE.AREA_LINE) return <AreaLineChart points={config.points} />;
   if (config.type === CHART_TYPE.TREND_VIEW) {
     const listenerPoints = listenerItems && !Array.isArray(listenerItems)
