@@ -155,7 +155,7 @@ export type BaseVisualizationConfig =
   | { type: typeof CHART_TYPE.SEGMENTED_SPLIT_BAR; items: VariationRow[]; labelA?: string; labelB?: string; unit?: string; itemsByEntity?: Record<string, VariationRow[]> }
   | { type: typeof CHART_TYPE.BALANCE_SCALE; left: QuotationSide; right: QuotationSide; leftTitle?: string; rightTitle?: string; unit?: string; dataByEntity?: Record<string, QuotationSummary> }
   | { type: typeof CHART_TYPE.AREA_LINE; points: QuotationTrendPoint[] }
-  | { type: typeof CHART_TYPE.TREND_VIEW; points: QuotationTrendPoint[]; pointsByEntity?: Record<string, QuotationTrendPoint[]> }
+  | { type: typeof CHART_TYPE.TREND_VIEW; points: QuotationTrendPoint[]; pointsByEntity?: Record<string, QuotationTrendPoint[]>; xLabel?: string; yLabel?: string; valuePrefix?: string }
   | { type: typeof CHART_TYPE.WEEKLY_FLOW; items: ContractorRow[] }
   | { type: typeof CHART_TYPE.HORIZONTAL_BAR; rows: HorizontalBarRow[]; valuePrefix?: string };
 
@@ -242,7 +242,7 @@ export type ScorecardRow = {
 };
 
 export type KeyHighlightBlock =
-  | { type: 'stats';           items: Array<{ value: string; label: string; color?: string; icon?: string }>; takeaway?: string }
+  | { type: 'stats';           items: Array<{ value: string; label: string; sublabel?: string; color?: string; icon?: string }>; takeaway?: string }
   | { type: 'chips';           items: KeyHighlightChip[]; takeaway?: string }
   | { type: 'ranked';          items: Array<{ name: string; value: string; kpiLabel?: string }>; takeaway?: string }
   | { type: 'proportion';      leftPct: number; leftLabel: string; leftValue: string; leftColor?: string; rightPct: number; rightLabel: string; rightValue: string; rightColor?: string; chips?: KeyHighlightChip[]; takeaway?: string }

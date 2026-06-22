@@ -26,7 +26,7 @@ const MAX_SAMPLE = 20; // max points to measureText for minStep calculation
 // At DPR=2 a 5 000px canvas uses ~22 MB; beyond that allocation blocks the main thread.
 const MAX_CANVAS_W = 5000;
 
-export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colorOffset = 0, testID }: TrendProps) {
+export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colorOffset = 0, xLabel = 'Period', yLabel = 'Count', valuePrefix = '', testID }: TrendProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const yAxisRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -102,6 +102,15 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
       point: p,
     }));
 
+    // Precision for Y-axis: derive from magnitude of max value so sub-1 decimals render correctly
+    const absMax = Math.max(Math.abs(maxCount), Math.abs(minCount));
+    const yPrecision = absMax === 0 ? 1
+      : absMax < 0.001 ? 5
+      : absMax < 0.01  ? 4
+      : absMax < 0.1   ? 3
+      : absMax < 1     ? 2
+      : 1;
+
     // Draw Y-axis once — it never changes
     if (yCtx) {
       yCtx.clearRect(0, 0, PAD_L, H);
@@ -118,7 +127,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
         yCtx.font = AXIS_LABEL.font;
         yCtx.fillStyle = AXIS_LABEL.color;
         yCtx.textAlign = 'right';
-        yCtx.fillText(formatNumber(value), PAD_L - 6, y + 3);
+        yCtx.fillText(`${valuePrefix}${formatNumber(value, yPrecision)}`, PAD_L - 6, y + 3);
       });
 
       yCtx.save();
@@ -127,7 +136,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
       yCtx.font = AXIS_LABEL.font;
       yCtx.fillStyle = AXIS_LABEL.color;
       yCtx.textAlign = 'center';
-      yCtx.fillText('Count', 0, 0);
+      yCtx.fillText(yLabel, 0, 0);
       yCtx.restore();
     }
 
@@ -174,12 +183,6 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
         ctx.stroke();
         ctx.setLineDash([]);
       });
-
-      // X-axis label + baseline
-      ctx.font = AXIS_LABEL.font;
-      ctx.fillStyle = AXIS_LABEL.color;
-      ctx.textAlign = 'center';
-      ctx.fillText('Period', padLC + (chartW - padLC) / 2, H - 6);
 
       // Draw baseline - use zero line if there are negative values, otherwise bottom
       ctx.strokeStyle = rgb(CC.bd, hasNegativeValues ? 0.5 : 0.3);
@@ -239,7 +242,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
         for (let i = 0; i < drawN; i++) {
           registerHitCircle(hitZonesRef.current, `pt-${i}`, pts[i].x, pts[i].y, 10, {
             label: pts[i].point.week,
-            value: String(pts[i].point.count),
+            value: `${valuePrefix}${String(pts[i].point.count)}`,
             color: seriesColor,
           });
         }
@@ -265,25 +268,30 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
   if (isEmpty) return <ChartEmptyState width={MIN_W} height={H} testID={testID} />;
 
   return (
-    <div data-testid={testID} style={{ position: 'relative', width: '100%', display: 'flex' }}>
-      <canvas
-        ref={yAxisRef}
-        aria-hidden="true"
-        style={{ width: PAD_L, height: H, display: 'block', flexShrink: 0 }}
-      />
-      <div
-        className="trend-scroll"
-        style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}
-      >
-        <div style={{ position: 'relative', width: chartCanvasW, height: H }}>
-          <canvas
-            ref={canvasRef}
-            role="img"
-            aria-label="Trend chart — count over time"
-            style={{ width: chartCanvasW, height: H, display: 'block' }}
-          />
-          <CanvasTooltip {...tooltip} parentW={chartCanvasW} parentH={H} />
+    <div data-testid={testID} style={{ width: '100%' }}>
+      <div style={{ position: 'relative', width: '100%', display: 'flex' }}>
+        <canvas
+          ref={yAxisRef}
+          aria-hidden="true"
+          style={{ width: PAD_L, height: H, display: 'block', flexShrink: 0 }}
+        />
+        <div
+          className="trend-scroll"
+          style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}
+        >
+          <div style={{ position: 'relative', width: chartCanvasW, height: H }}>
+            <canvas
+              ref={canvasRef}
+              role="img"
+              aria-label="Trend chart — count over time"
+              style={{ width: chartCanvasW, height: H, display: 'block' }}
+            />
+            <CanvasTooltip {...tooltip} parentW={chartCanvasW} parentH={H} />
+          </div>
         </div>
+      </div>
+      <div style={{ paddingLeft: PAD_L, textAlign: 'center', fontSize: 16, color: AXIS_LABEL.color, fontFamily: "'Satoshi Variable', 'DM Sans', sans-serif", marginTop: 4 }}>
+        {xLabel}
       </div>
     </div>
   );

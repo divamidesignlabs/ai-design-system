@@ -278,11 +278,11 @@ const HIGHLIGHTS: Record<string, KeyHighlightBlock> = {
   q1: {
     type: 'stats',
     items: [
-      { value: '£752.2M', label: 'total portfolio commitment' },
-      { value: '£659M',   label: 'base contract value across all 5 active contractors',           },
-      { value: '£93.2M',  label: 'variations approved — 12.4% on top of base contract value',     },
-      { value: 'L&T',     label: 'largest share at £210.6M total — 28% of the full portfolio',     },
-      { value: 'KEC 42%', label: 'highest variation-to-base ratio — 3× the portfolio average',    },
+      { value: '£752.2M', label: 'Total Portfolio Commitment',    sublabel: 'across 5 active contractors' },
+      { value: '£659M',   label: 'Base Contract Value',           sublabel: '87.6% of total commitment' },
+      { value: '£93.2M',  label: 'Approved Variations',          sublabel: '+12.4% on top of base' },
+      { value: 'L&T',     label: 'Largest Contractor',           sublabel: '£210.6M — 28% of portfolio' },
+      { value: 'KEC 42%', label: 'Highest Variation Ratio',      sublabel: '3× the portfolio average' },
     ],
     takeaway: 'L&T and NCC together anchor 50% of portfolio value. KEC\'s 42% variation ratio is 3× the average — the clearest single-contractor risk flag.',
   },

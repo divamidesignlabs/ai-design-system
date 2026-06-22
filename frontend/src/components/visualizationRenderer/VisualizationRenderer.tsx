@@ -94,7 +94,7 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
     const listenerPoints = listenerItems && !Array.isArray(listenerItems)
       ? (listenerItems as { points?: QuotationTrendPoint[] }).points ?? []
       : undefined;
-    return <Trend points={listenerPoints ?? config.points} colorOffset={colorOffset} />;
+    return <Trend points={listenerPoints ?? config.points} colorOffset={colorOffset} xLabel={config.xLabel} yLabel={config.yLabel} valuePrefix={config.valuePrefix} />;
   }
   if (config.type === CHART_TYPE.WEEKLY_FLOW) {
     const items = listenerItems ? listenerItems as ContractorRow[] : config.items;
