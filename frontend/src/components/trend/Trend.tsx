@@ -26,7 +26,7 @@ const MAX_SAMPLE = 20; // max points to measureText for minStep calculation
 // At DPR=2 a 5 000px canvas uses ~22 MB; beyond that allocation blocks the main thread.
 const MAX_CANVAS_W = 5000;
 
-export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colorOffset = 0, xLabel = 'Period', yLabel = 'Count', valuePrefix = '', testID }: TrendProps) {
+export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colorOffset = 0, xLabel = 'Period', yLabel = 'Count', valuePrefix = '', testID, animationEnabled = true }: TrendProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const yAxisRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -145,32 +145,12 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
     areaGrad.addColorStop(0, rgb(seriesColor, 0.12));
     areaGrad.addColorStop(1, rgb(seriesColor, 0.02));
 
-    let prevDrawN = 0;
-    let raf: number;
+    const gridFractions = hasNegativeValues
+      ? [0, 0.25, 0.5, 0.75, 1.0]
+      : [0.25, 0.5, 0.75, 1.0];
 
-    const drawLabels = (upTo: number) => {
-      ctx.font = LABEL_FONT;
-      ctx.fillStyle = AXIS_LABEL.color;
-      ctx.textAlign = 'center';
-      for (let i = 0; i < upTo; i++) {
-        if (i % labelStride !== 0) continue;
-        ctx.fillText(pts[i].point.week, pts[i].x, H - padB + 14);
-      }
-    };
-
-    const draw = () => {
-      frameRef.current++;
-      const rawP = Math.min(frameRef.current / DURATION, 1);
-      const progress = easeOutCubic(rawP);
-      const isLastFrame = rawP >= 1;
-
-      ctx.clearRect(0, 0, chartCanvasW, H);
+    const drawGridAndBaseline = () => {
       ctx.letterSpacing = AXIS_LABEL.letterSpacing;
-
-      // Grid lines - update to match Y-axis labels
-      const gridFractions = hasNegativeValues
-        ? [0, 0.25, 0.5, 0.75, 1.0]
-        : [0.25, 0.5, 0.75, 1.0];
 
       gridFractions.forEach(frac => {
         const y = padT + chartH - frac * chartH;
@@ -191,6 +171,77 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
       ctx.moveTo(padLC, hasNegativeValues ? zeroY : padT + chartH);
       ctx.lineTo(chartW, hasNegativeValues ? zeroY : padT + chartH);
       ctx.stroke();
+    };
+
+    const drawLabels = (upTo: number) => {
+      ctx.font = LABEL_FONT;
+      ctx.fillStyle = AXIS_LABEL.color;
+      ctx.textAlign = 'center';
+      for (let i = 0; i < upTo; i++) {
+        if (i % labelStride !== 0) continue;
+        ctx.fillText(pts[i].point.week, pts[i].x, H - padB + 14);
+      }
+    };
+
+    if (!animationEnabled) {
+      // Instant full-state draw — no entry animation
+      drawGridAndBaseline();
+
+      if (n >= 2) {
+        const fillBaseline = hasNegativeValues ? zeroY : padT + chartH;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, fillBaseline);
+        ctx.lineTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < n; i++) {
+          ctx.lineTo(pts[i].x, pts[i].y);
+        }
+        ctx.lineTo(pts[n - 1].x, fillBaseline);
+        ctx.closePath();
+        ctx.fillStyle = areaGrad;
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        i === 0 ? ctx.moveTo(pts[i].x, pts[i].y) : ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      ctx.strokeStyle = rgb(seriesColor, 0.85);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = rgb(seriesColor, 0.8);
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        ctx.moveTo(pts[i].x + 3.5, pts[i].y);
+        ctx.arc(pts[i].x, pts[i].y, 3.5, 0, PI2);
+      }
+      ctx.fill();
+
+      hitZonesRef.current = [];
+      for (let i = 0; i < n; i++) {
+        registerHitCircle(hitZonesRef.current, `pt-${i}`, pts[i].x, pts[i].y, 10, {
+          label: pts[i].point.week,
+          value: `${valuePrefix}${String(pts[i].point.count)}`,
+          sublabel: pts[i].point.value != null ? `Queries: ${pts[i].point.value}` : undefined,
+          color: seriesColor,
+        });
+      }
+
+      drawLabels(n);
+      return;
+    }
+
+    let prevDrawN = 0;
+    let raf: number;
+
+    const draw = () => {
+      frameRef.current++;
+      const rawP = Math.min(frameRef.current / DURATION, 1);
+      const progress = easeOutCubic(rawP);
+      const isLastFrame = rawP >= 1;
+
+      ctx.clearRect(0, 0, chartCanvasW, H);
+      drawGridAndBaseline();
 
       const drawUpTo = progress * (n - 1);
       const drawN = Math.floor(drawUpTo) + 1;
@@ -243,6 +294,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
           registerHitCircle(hitZonesRef.current, `pt-${i}`, pts[i].x, pts[i].y, 10, {
             label: pts[i].point.week,
             value: `${valuePrefix}${String(pts[i].point.count)}`,
+            sublabel: pts[i].point.value != null ? `Queries: ${pts[i].point.value}` : undefined,
             color: seriesColor,
           });
         }
@@ -262,7 +314,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [points, chartCanvasW, minStep, hitZonesRef, colorOffset]);
+  }, [points, chartCanvasW, minStep, hitZonesRef, colorOffset, animationEnabled]);
 
   const isEmpty = points.length === 0;
   if (isEmpty) return <ChartEmptyState width={MIN_W} height={H} testID={testID} />;
