@@ -9,4 +9,6 @@ export interface TrendProps {
   yLabel?: string;
   valuePrefix?: string;
   testID?: string;
+  /** Progressive line-draw entry animation. Defaults to true (existing behavior). */
+  animationEnabled?: boolean;
 }
