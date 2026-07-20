@@ -65,7 +65,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
     const rootR = 40;
     const splitX = rootX + rootR + 60; // single stem ends here, branches fan out from this point
     const leafX = W - 140;
-    const maxCount = Math.max(...byContractor.map(c => c.count ?? 0), 1);
+    const maxCount = Math.max(...byContractor.map(c => Math.abs(c.count ?? 0)), 1);
     const leafSpacing = byContractor.length > 1 ? (fanH - 60) / (byContractor.length - 1) : 60;
     const maxLeafR = Math.min(22, leafSpacing / 2 - 3);
     const minLeafR = Math.min(8, Math.max(3, maxLeafR - 6));
@@ -140,7 +140,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
         // Leaf node — radius scales with count
         if (localP > 0.85) {
           const leafFade = Math.min(1, (localP - 0.85) / 0.15);
-          const leafR = minLeafR + ((c.count ?? 0) / maxCount) * (maxLeafR - minLeafR);
+          const leafR = minLeafR + (Math.abs(c.count ?? 0) / maxCount) * (maxLeafR - minLeafR);
 
           drawGlow(ctx, lpos.x, lpos.y, leafR * 2, color, (0.2 + hp * 0.2) * leafFade * dimFactor);
           ctx.beginPath();

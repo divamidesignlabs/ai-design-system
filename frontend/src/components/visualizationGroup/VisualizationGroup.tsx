@@ -9,6 +9,31 @@ function normalizeId(id: string): string {
   return id.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+function hasUsableSubentity(subentity: unknown): boolean {
+  return subentity != null && (Array.isArray(subentity) ? subentity.length > 0 : true);
+}
+
+// Mirrors the backend's BROADCAST_LIST_FIELDS/BROADCAST_DICT_FIELDS contract
+// (chart_config.py): most charts carry drill-down rows under "items"; balance-scale
+// carries them under "left"/"right"; semi-circular-gauge carries "subentity" directly.
+function configHasAnySubentity(config: BaseVisualizationConfig): boolean {
+  const c = config as unknown as Record<string, unknown>;
+  if (hasUsableSubentity(c.subentity)) return true;
+  for (const dictField of ['left', 'right']) {
+    const side = c[dictField] as Record<string, unknown> | undefined;
+    if (side && hasUsableSubentity(side.subentity)) return true;
+  }
+  const items = c.items;
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      if (item && typeof item === 'object' && hasUsableSubentity((item as Record<string, unknown>).subentity)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 const W = 56;   // connector column width (px)
 
 export function VisualizationGroup({ items, colorOffset = 0, title, 'data-testid': testID }: VisualizationGroupProps) {
@@ -100,6 +125,7 @@ export function VisualizationGroup({ items, colorOffset = 0, title, 'data-testid
     sourceYInCanvasRef.current = null;
   }, []);
 
+  const hasDrilldownData = items.some(configHasAnySubentity);
   const isActive = broadcasterIndex !== null && connectorY !== null;
   const lineY = connectorY ?? containerH / 2;
 
@@ -128,11 +154,11 @@ export function VisualizationGroup({ items, colorOffset = 0, title, 'data-testid
             <img src={arrowClockwiseIcon} alt="" className="viz-group__reset-icon" />
             Reset
           </button>
-        ) : (
+        ) : hasDrilldownData ? (
           <span className="viz-group__hint">
             ↑ Click a row to drill down
           </span>
-        )}
+        ) : null}
       </div>
       <div ref={chartsContainerRef} className="viz-group__charts">
         {items.flatMap((config: BaseVisualizationConfig, i: number) => {
