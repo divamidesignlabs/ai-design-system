@@ -1,4 +1,4 @@
-import type { NCEContractorRow } from '../../types';
+import type { NCEContractorRow, SubentityPayload } from '../../types';
 
 export interface RadialFanEntityData {
   total: number;
@@ -11,7 +11,7 @@ export interface RadialFanTreeChartProps {
   totalLabel?: string;
   items: NCEContractorRow[];
   dataByEntity?: Record<string, RadialFanEntityData>;
-  onItemClick?: (id: string, label: string) => void;
+  onItemClick?: (id: string, label: string, subentity?: SubentityPayload) => void;
   selectedId?: string;
   width?: number;
   colorOffset?: number;

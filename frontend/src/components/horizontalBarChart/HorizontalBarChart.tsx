@@ -1,15 +1,17 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 
 import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
+import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutQuart, stagger, tickHoverProgress } from '../../canvas/easing';
 import { CC, AXIS_LABEL, CHART_VALUE, rgb, drawGlow } from '../../canvas/canvasUtils';
 import { useCanvasLoop } from '../../canvas/useCanvasLoop';
+import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
 import type { HorizontalBarChartProps } from './types';
 
-const W         = 680;
+const DEFAULT_W = 680;
 const MIN_H     = 160;
 const PAD       = { left: 8, right: 90, top: 16, bottom: 16 };
 const NAME_W    = 150;
@@ -32,10 +34,19 @@ function fmtValue(v: number, prefix: string): string {
   return `${sign}${prefix}${abs.toFixed(0)}`;
 }
 
-export function HorizontalBarChart({ rows, valuePrefix = '$', testID }: HorizontalBarChartProps) {
+export function HorizontalBarChart({ rows, valuePrefix = '$', onItemClick, testID }: HorizontalBarChartProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap  = useRef<Map<string, number>>(new Map());
   const [showAll, setShowAll] = useState(false);
+  const rowsRef   = useRef(rows);
+  rowsRef.current = rows;
+
+  const handleClick = useCallback((id: string, data: TooltipContent | string) => {
+    const label = typeof data === 'object' ? (data.label ?? id) : id;
+    const row = rowsRef.current.find(r => r.id === id);
+    onItemClick?.(id, label, row?.subentity);
+  }, [onItemClick]);
 
   const validRows   = rows.filter(r => r != null && typeof r.value === 'number');
   const visibleRows = showAll ? validRows : validRows.slice(0, MAX_ITEMS);
@@ -45,7 +56,7 @@ export function HorizontalBarChart({ rows, valuePrefix = '$', testID }: Horizont
   const contentH  = n * ROW_H;
   const H         = PAD.top + PAD.bottom + contentH;
 
-  const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width: W, height: H });
+  const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width: W, height: H, onClick: onItemClick ? handleClick : undefined });
 
   useCanvasLoop(
     canvasRef,
@@ -133,17 +144,21 @@ export function HorizontalBarChart({ rows, valuePrefix = '$', testID }: Horizont
   );
 
   if (validRows.length === 0) {
-    return <ChartEmptyState width={W} height={MIN_H} message="No data available" testID={testID} />;
+    return (
+      <div ref={containerRef} style={{ width: '100%' }}>
+        <ChartEmptyState width={W} height={MIN_H} message="No data available" testID={testID} />
+      </div>
+    );
   }
 
   return (
-    <div data-testid={testID} style={{ width: W }}>
+    <div ref={containerRef} data-testid={testID} style={{ width: '100%' }}>
       <div style={{ position: 'relative' }}>
         <canvas
           ref={canvasRef}
           role="img"
           aria-label="Horizontal bar chart"
-          style={{ width: W, height: H, display: 'block', borderRadius: 8 }}
+          style={{ width: '100%', height: H, display: 'block', borderRadius: 8 }}
         />
         <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
       </div>
@@ -152,7 +167,7 @@ export function HorizontalBarChart({ rows, valuePrefix = '$', testID }: Horizont
           <ToggleButton
             expanded={showAll}
             onToggle={() => setShowAll(prev => !prev)}
-            data-testid={testId ? `${testId}-toggle` : undefined}
+            data-testid={testID ? `${testID}-toggle` : undefined}
           />
         </div>
       )}

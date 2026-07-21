@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { KeyHighlights } from '../../components/keyHighlights/KeyHighlights';
 import { MultiSegmentHorizontalBarChart } from '../../components/multiSegmentHorizontalBarChart';
 import { Trend } from '../../components/trend/Trend';
+import { VisualizationGroup } from '../../components/visualizationGroup/VisualizationGroup';
 import { VisualizationRenderer } from '../../components/visualizationRenderer/VisualizationRenderer';
 import { dualSegmentBarRows } from '../../mocks/workspace.mock';
 import type { KeyHighlightBlock } from '../../types';
@@ -41,20 +42,20 @@ const miniBarsRows: [string, number, string][] = [
  */
 const contractValueData = {
   items: [
-    { id: 'c1', name: 'Tata Projects',        base: 142, variation: 18.4, total: 160.4, percentage: 87 },
-    { id: 'c2', name: 'L&T Construction',     base: 198, variation: 12.6, total: 210.6, percentage: 92 },
-    { id: 'c3', name: 'Afcons Infra',      base: 89,  variation: 22.1, total: 111.1, percentage: 78 },
-    { id: 'c4', name: 'NCC Ltd',             base: 156, variation: 8.9,  total: 164.9, percentage: 95 },
-    { id: 'c5', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
-    { id: 'c6', name: 'KEC International',    base: 142,  variation: 18.4, total: 160.4, percentage: 87 },
-    { id: 'c7', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
-    { id: 'c8', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
-    { id: 'c9', name: 'KEC International',    base: 198,  variation: 12.6, total: 210.6, percentage: 92 },
-    { id: 'c10', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
-    { id: 'c11', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
-    { id: 'c12', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
-    { id: 'c13', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
-    { id: 'c14', name: 'KEC International',    base: 74,  variation: 31.2, total: 105.2, percentage: 69 },
+    { id: 'c1', name: 'Tata Projects',        base: 142, variation: 18.4, total: 16798564.4, percentage: 87 },
+    { id: 'c2', name: 'L&T Construction',     base: 198, variation: 12.6, total: 21034567.6, percentage: 92 },
+    { id: 'c3', name: 'Afcons Infra',      base: 89,  variation: 22.1, total: 1134561.1, percentage: 78 },
+    { id: 'c4', name: 'NCC Ltd',             base: 156, variation: 8.9,  total: 1634564.9, percentage: 95 },
+    { id: 'c5', name: 'KEC International',    base: 74,  variation: 31.2, total: 13456705.2, percentage: 69 },
+    { id: 'c6', name: 'KEC International',    base: 142,  variation: 18.4, total: 14567860.4, percentage: 87 },
+    { id: 'c7', name: 'KEC International',    base: 74,  variation: 31.2, total: 105675.2, percentage: 69 },
+    { id: 'c8', name: 'KEC International',    base: 74,  variation: 31.2, total: 10345675.2, percentage: 69 },
+    { id: 'c9', name: 'KEC International',    base: 198,  variation: 12.6, total: 2145670.6, percentage: 92 },
+    { id: 'c10', name: 'KEC International',    base: 74,  variation: 31.2, total: 1034565.2, percentage: 69 },
+    { id: 'c11', name: 'KEC International',    base: 74,  variation: 31.2, total: 1234505.2, percentage: 69 },
+    { id: 'c12', name: 'KEC International',    base: 74,  variation: 31.2, total: 1345605.2, percentage: 69 },
+    { id: 'c13', name: 'KEC International',    base: 74,  variation: 31.2, total: 104565.2, percentage: 69 },
+    { id: 'c14', name: 'KEC International',    base: 74,  variation: 31.2, total: 1456705.2, percentage: 69 },
     
 
   ],
@@ -160,6 +161,38 @@ const nceByContractorData = [
 ];
 const nceTotal = 431;
 const nceTotalLabel = 'Active Early Warnings';
+
+/**
+ * Q8b — visualization_group (progress-race-chart broadcaster -> radial-fan-tree-chart listener)
+ * Reproduces the exact "Open NCEs by Contractor & Approved NCEs by Area" payload that shipped
+ * without `subentity` on any broadcaster item — the click hint showed but nothing happened.
+ *
+ * "withSubentity" -> every broadcaster item carries subentity: hint shows AND drill-down works.
+ * "withoutSubentity" -> no broadcaster item carries subentity: hint must NOT render (the fix).
+ */
+const openNceListenerDefault = {
+  type: 'radial-fan-tree-chart' as const,
+  total: 159,
+  totalLabel: '159 Approved NCEs',
+  items: [
+    { id: 'area-meltshop', name: 'Meltshop', count: 148 },
+    { id: 'area-programme', name: 'Programme', count: 11 },
+  ],
+};
+
+const openNceBroadcasterItemsWithSubentity = [
+  { id: 'c-darlow', name: 'Darlow Lloyd', abbreviation: 'Darlow', base: 15, total: 8, percentage: 53.3, baseLabel: '15 NCEs', totalLabel: '8 Open',
+    subentity: { total: 8, totalLabel: '8 Open', items: [{ id: 'area-meltshop', name: 'Meltshop', count: 5 }, { id: 'area-programme', name: 'Programme', count: 3 }] } },
+  { id: 'c-wernick', name: 'Wernick', abbreviation: 'Wernic', base: 15, total: 15, percentage: 100, baseLabel: '15 NCEs', totalLabel: '15 Open',
+    subentity: { total: 15, totalLabel: '15 Open', items: [{ id: 'area-meltshop', name: 'Meltshop', count: 12 }, { id: 'area-programme', name: 'Programme', count: 3 }] } },
+  { id: 'c-asl', name: 'ASL', abbreviation: 'ASL', base: 15, total: 12, percentage: 80, baseLabel: '15 NCEs', totalLabel: '12 Open',
+    subentity: { total: 12, totalLabel: '12 Open', items: [{ id: 'area-meltshop', name: 'Meltshop', count: 9 }, { id: 'area-programme', name: 'Programme', count: 3 }] } },
+];
+
+// Same rows, `subentity` stripped -- this is the exact shape that produced the bug.
+const openNceBroadcasterItemsWithoutSubentity = openNceBroadcasterItemsWithSubentity.map(
+  ({ subentity: _subentity, ...rest }) => rest,
+);
 
 /**
  * Q9 — semi-circular-gauge-chart
@@ -278,11 +311,11 @@ const HIGHLIGHTS: Record<string, KeyHighlightBlock> = {
   q1: {
     type: 'stats',
     items: [
-      { value: '£752.2M', label: 'total portfolio commitment' },
-      { value: '£659M',   label: 'base contract value across all 5 active contractors',           },
-      { value: '£93.2M',  label: 'variations approved — 12.4% on top of base contract value',     },
-      { value: 'L&T',     label: 'largest share at £210.6M total — 28% of the full portfolio',     },
-      { value: 'KEC 42%', label: 'highest variation-to-base ratio — 3× the portfolio average',    },
+      { value: '£752.2M', label: 'Total Portfolio Commitment',    sublabel: 'across 5 active contractors' },
+      { value: '£659M',   label: 'Base Contract Value',           sublabel: '87.6% of total commitment' },
+      { value: '£93.2M',  label: 'Approved Variations',          sublabel: '+12.4% on top of base' },
+      { value: 'L&T',     label: 'Largest Contractor',           sublabel: '£210.6M — 28% of portfolio' },
+      { value: 'KEC 42%', label: 'Highest Variation Ratio',      sublabel: '3× the portfolio average' },
     ],
     takeaway: 'L&T and NCC together anchor 50% of portfolio value. KEC\'s 42% variation ratio is 3× the average — the clearest single-contractor risk flag.',
   },
@@ -590,6 +623,26 @@ export function ChartGalleryPage() {
       <h3>Q8 — radial-fan-tree-chart</h3>
       <VisualizationRenderer config={{ type: 'radial-fan-tree-chart', total: nceTotal, totalLabel: nceTotalLabel, items: nceByContractorData }} />
       <KeyHighlights block={HIGHLIGHTS.q8} />
+
+      <h3>Q8b — visualization_group WITH subentity (hint shows, drill-down works)</h3>
+      <VisualizationGroup
+        title="Open NCEs by Contractor & Approved NCEs by Area"
+        items={[
+          { type: 'progress-race-chart', items: openNceBroadcasterItemsWithSubentity },
+          openNceListenerDefault,
+        ]}
+        data-testid="gallery-viz-group-with-subentity"
+      />
+
+      <h3>Q8c — visualization_group WITHOUT subentity (bug repro — hint must stay hidden)</h3>
+      <VisualizationGroup
+        title="Open NCEs by Contractor & Approved NCEs by Area"
+        items={[
+          { type: 'progress-race-chart', items: openNceBroadcasterItemsWithoutSubentity },
+          openNceListenerDefault,
+        ]}
+        data-testid="gallery-viz-group-without-subentity"
+      />
 
       <h3>Q9 — semi-circular-gauge-chart</h3>
       <VisualizationRenderer config={{ type: 'semi-circular-gauge-chart', confirmed: compensationGaugeData.confirmed, total: compensationGaugeData.total, label: 'NCEs are confirmed compensation events' }} />

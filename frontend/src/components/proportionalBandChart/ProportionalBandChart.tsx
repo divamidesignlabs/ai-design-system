@@ -1,19 +1,20 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useCallback } from 'react';
 
 import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
+import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { tickHoverProgress, easeOutQuart } from '../../canvas/easing';
 import { CC, CHART_PALETTE, AXIS_LABEL, rgb, setupCanvas } from '../../canvas/canvasUtils';
+import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { formatNumber } from '../../utils/numberFormat';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import type { EWSeverityRow } from '../../types';
 import type { ProportionalBandChartProps } from './types';
 
-const MAX_W     = 780;
-const H         = 340;
-const PAD_SIDE  = 28;
-const BAND_GAP  = 4;   // px gap between adjacent trapezoids
-const MIN_BAND_W = 148;
+const DEFAULT_W  = 780;
+const H          = 340;
+const PAD_SIDE   = 28;
+const BAND_GAP   = 4;
 
 function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;
@@ -22,7 +23,8 @@ function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxW: numb
   return `${t}…`;
 }
 
-export function ProportionalBandChart({ severities: rawSeverities = [], colorOffset = 0, testID }: ProportionalBandChartProps) {
+export function ProportionalBandChart({ severities: rawSeverities = [], colorOffset = 0, onItemClick, testID }: ProportionalBandChartProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
   const frameRef = useRef(0);
@@ -32,16 +34,21 @@ export function ProportionalBandChart({ severities: rawSeverities = [], colorOff
     [rawSeverities],
   );
 
-  const dynamicW = severities.length > 0
-    ? Math.min(MAX_W, 2 * PAD_SIDE + severities.length * MIN_BAND_W)
-    : MAX_W;
+  const severitiesRef = useRef(severities);
+  severitiesRef.current = severities;
 
-  const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width: dynamicW, height: H });
+  const handleClick = useCallback((id: string, data: TooltipContent | string) => {
+    const label = typeof data === 'object' ? (data.label ?? id) : id;
+    const sev = severitiesRef.current.find(s => s.severity === id);
+    onItemClick?.(id, label, sev?.subentity);
+  }, [onItemClick]);
+
+  const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width: W, height: H, onClick: onItemClick ? handleClick : undefined });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = setupCanvas(canvas, dynamicW, H);
+    const ctx = setupCanvas(canvas, W, H);
     frameRef.current = 0;
     const DURATION = 60;
 
@@ -50,7 +57,7 @@ export function ProportionalBandChart({ severities: rawSeverities = [], colorOff
     const padR = PAD_SIDE;
     const padT = 54;
     const padB = 54;
-    const trackW   = dynamicW - padL - padR;
+    const trackW   = W - padL - padR;
     const bandH    = H - padT - padB;
     const gapTotal = Math.max(0, severities.length - 1) * BAND_GAP;
     const bandTrackW = trackW - gapTotal;
@@ -63,7 +70,7 @@ export function ProportionalBandChart({ severities: rawSeverities = [], colorOff
     const draw = () => {
       frameRef.current++;
       const T = frameRef.current;
-      ctx.clearRect(0, 0, dynamicW, H);
+      ctx.clearRect(0, 0, W, H);
       ctx.letterSpacing = AXIS_LABEL.letterSpacing;
 
       const rawP = Math.min(T / DURATION, 1);
@@ -157,20 +164,24 @@ export function ProportionalBandChart({ severities: rawSeverities = [], colorOff
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [severities, dynamicW, colorOffset]);
+  }, [severities, W, colorOffset]);
 
   const isEmpty = severities.length === 0;
-  if (isEmpty) return <ChartEmptyState width={dynamicW} height={H} testID={testID} />;
+  if (isEmpty) return (
+    <div ref={containerRef} style={{ width: '100%' }}>
+      <ChartEmptyState width={W} height={H} testID={testID} />
+    </div>
+  );
 
   return (
-    <div data-testid={testID} style={{ position: 'relative', width: dynamicW, height: H }}>
+    <div ref={containerRef} data-testid={testID} style={{ position: 'relative', width: '100%', height: H }}>
       <canvas
         ref={canvasRef}
         role="img"
         aria-label="Early Warning severity distribution — prism spectrum bands"
-        style={{ width: dynamicW, height: H, display: 'block' }}
+        style={{ width: '100%', height: H, display: 'block' }}
       />
-      <CanvasTooltip {...tooltip} parentW={dynamicW} parentH={H} />
+      <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
     </div>
   );
 }

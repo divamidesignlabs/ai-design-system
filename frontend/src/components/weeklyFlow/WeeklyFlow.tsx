@@ -1,10 +1,11 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 
 import { CanvasTooltip } from "../../canvas/CanvasTooltip";
 import {
   useCanvasInteraction,
   registerHitRect,
 } from "../../canvas/useCanvasInteraction";
+import type { TooltipContent } from "../../canvas/useCanvasInteraction";
 import { stagger, tickHoverProgress, easeOutCubic } from "../../canvas/easing";
 import {
   CC,
@@ -15,23 +16,35 @@ import {
   drawGlow,
   setupCanvas,
 } from "../../canvas/canvasUtils";
+import { useContainerWidth } from "../../canvas/useContainerWidth";
 import { formatNumber } from "../../utils/numberFormat";
 import type { WeeklyFlowProps } from "./types";
 
-const W = 800;
+const DEFAULT_W = 800;
 const H = 360;
 
 export function WeeklyFlow({
   items: items = [],
+  onItemClick,
   testID,
 }: WeeklyFlowProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
   const frameRef = useRef(0);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  const handleClick = useCallback((id: string, data: TooltipContent | string) => {
+    const label = typeof data === 'object' ? (data.label ?? id) : id;
+    const item = itemsRef.current.find(c => c.id === id);
+    onItemClick?.(id, label, item?.subentity);
+  }, [onItemClick]);
 
   const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, {
     width: W,
     height: H,
+    onClick: onItemClick ? handleClick : undefined,
   });
 
   useEffect(() => {
@@ -42,10 +55,10 @@ export function WeeklyFlow({
     const DURATION = 80;
 
     // ── Layout constants ─────────────────────────────────────────────────────
-    const col1X = 100;
-    const col2X = 420;
-    const col3X = 720;
-    const nodeW = 110;
+    const col1X = Math.round(W * 0.125);
+    const col2X = Math.round(W * 0.525);
+    const col3X = Math.round(W * 0.9);
+    const nodeW = Math.max(60, Math.round(W * 0.1375));
     const padT = 20;
     const padB = 26;
     const nodeGap = 6; // gap between contractor nodes
@@ -218,7 +231,16 @@ export function WeeklyFlow({
         registerHitRect(hitZonesRef.current, c.id, cn.x, cn.y, nodeW, cn.h, {
           label: c.name,
           value: c.totalLabel ?? String(c.total ?? 0),
-          sublabel: `${c.baseLabel ?? String(c.base ?? 0)} + ${c.variationLabel ?? String(c.variation ?? 0)}`,
+          sublabel: (() => {
+            const b = c.base ?? 0;
+            const v = c.variation ?? 0;
+            const bStr = c.baseLabel ?? formatNumber(b);
+            const vStr = c.variationLabel ?? formatNumber(v);
+            if (b !== 0 && v !== 0) return `${bStr} + ${vStr}`;
+            if (b !== 0) return bStr;
+            if (v !== 0) return vStr;
+            return undefined;
+          })(),
           color: cn.color,
         });
 
@@ -342,18 +364,19 @@ export function WeeklyFlow({
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [items]);
+  }, [items, W]);
 
   return (
     <div
+      ref={containerRef}
       data-testid={testID}
-      style={{ position: "relative", width: W, height: H }}
+      style={{ position: "relative", width: "100%", height: H }}
     >
       <canvas
         ref={canvasRef}
         role="img"
         aria-label="Weekly report flow — base value and variations per contractor flowing to total commitment"
-        style={{ width: W, height: H, display: "block" }}
+        style={{ width: "100%", height: H, display: "block" }}
       />
       <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
     </div>

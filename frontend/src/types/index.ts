@@ -151,25 +151,33 @@ export type BaseVisualizationConfig =
   | { type: typeof CHART_TYPE.RANKED_CARD_LEADERBOARD; items: EWOpenContractorRow[]; title?: string }
   | { type: typeof CHART_TYPE.PROPORTIONAL_BAND; severities: EWSeverityRow[]; title?: string }
   | { type: typeof CHART_TYPE.RADIAL_FAN_TREE; total: number; totalLabel?: string; items: NCEContractorRow[]; dataByEntity?: Record<string, { total: number; totalLabel?: string; items: NCEContractorRow[] }> }
-  | { type: typeof CHART_TYPE.SEMI_CIRCULAR_GAUGE; confirmed: number; total: number; label?: string; gaugeByEntity?: Record<string, { confirmed: number; total: number }> }
+  | { type: typeof CHART_TYPE.SEMI_CIRCULAR_GAUGE; confirmed: number; total: number; label?: string; gaugeByEntity?: Record<string, { confirmed: number; total: number }>; subentity?: SubentityItem[] }
   | { type: typeof CHART_TYPE.SEGMENTED_SPLIT_BAR; items: VariationRow[]; labelA?: string; labelB?: string; unit?: string; itemsByEntity?: Record<string, VariationRow[]> }
   | { type: typeof CHART_TYPE.BALANCE_SCALE; left: QuotationSide; right: QuotationSide; leftTitle?: string; rightTitle?: string; unit?: string; dataByEntity?: Record<string, QuotationSummary> }
   | { type: typeof CHART_TYPE.AREA_LINE; points: QuotationTrendPoint[] }
-  | { type: typeof CHART_TYPE.TREND_VIEW; points: QuotationTrendPoint[]; pointsByEntity?: Record<string, QuotationTrendPoint[]> }
+  | { type: typeof CHART_TYPE.TREND_VIEW; points: QuotationTrendPoint[]; pointsByEntity?: Record<string, QuotationTrendPoint[]>; xLabel?: string; yLabel?: string; valuePrefix?: string; animationEnabled?: boolean }
   | { type: typeof CHART_TYPE.WEEKLY_FLOW; items: ContractorRow[] }
   | { type: typeof CHART_TYPE.HORIZONTAL_BAR; rows: HorizontalBarRow[]; valuePrefix?: string };
+
+export type SubentityItem = Record<string, unknown>;
+
+export type RadialFanSubentity = { total: number; totalLabel: string; items: SubentityItem[] };
+
+export type SubentityPayload = SubentityItem[] | RadialFanSubentity;
 
 export type VisualizationRendererProps = {
   config: BaseVisualizationConfig;
   className?: string;
   colorOffset?: number;
-  onItemClick?: (id: string, label: string) => void;
+  onItemClick?: (id: string, label: string, subentity?: SubentityPayload) => void;
   selectedId?: string;
+  listenerItems?: SubentityPayload;
 };
 
 export type VisualizationGroupProps = {
   items: BaseVisualizationConfig[];
   colorOffset?: number;
+  title?: string;
   'data-testid'?: string;
 };
 
@@ -186,6 +194,7 @@ export type ContractorRow = {
   baseLabel?: string;
   variationLabel?: string;
   totalLabel?: string;
+  subentity?: SubentityPayload;
 };
 
 export type ContractData = {
@@ -195,10 +204,10 @@ export type ContractData = {
 
 export type EWStatusRow = { status: string; count: number };
 export type EWCategoryRow = { category: string; fullName: string; count: number };
-export type EWSeverityRow = { severity: string; count: number };
-export type EWOpenContractorRow = { id: string; name: string; abbreviation?: string; count?: number; label?: string };
+export type EWSeverityRow = { severity: string; count: number; subentity?: SubentityItem[] };
+export type EWOpenContractorRow = { id: string; name: string; abbreviation?: string; count?: number; label?: string; subentity?: SubentityItem[] };
 
-export type NCEContractorRow = { id: string; name: string; abbreviation?: string; count?: number; label?: string };
+export type NCEContractorRow = { id: string; name: string; abbreviation?: string; count?: number; label?: string; subentity?: SubentityItem[] };
 export type NCECompensationData = { total: number; confirmed: number; pctConfirmed: number };
 
 export type VariationRow = {
@@ -207,9 +216,10 @@ export type VariationRow = {
   abbreviation?: string;
   implemented?: number;
   unimplemented?: number;
+  subentity?: SubentityItem[];
 };
 
-export type QuotationSide = { value: number; count: number; label: string };
+export type QuotationSide = { value: number; count: number; label: string; subentity?: SubentityItem[] };
 export type QuotationSummary = { left: QuotationSide; right: QuotationSide };
 export type QuotationTrendPoint = { week: string; count: number; value?: number };
 
@@ -232,7 +242,7 @@ export type ScorecardRow = {
 };
 
 export type KeyHighlightBlock =
-  | { type: 'stats';           items: Array<{ value: string; label: string; color?: string; icon?: string }>; takeaway?: string }
+  | { type: 'stats';           items: Array<{ value: string; label: string; sublabel?: string; color?: string; icon?: string }>; takeaway?: string }
   | { type: 'chips';           items: KeyHighlightChip[]; takeaway?: string }
   | { type: 'ranked';          items: Array<{ name: string; value: string; kpiLabel?: string }>; takeaway?: string }
   | { type: 'proportion';      leftPct: number; leftLabel: string; leftValue: string; leftColor?: string; rightPct: number; rightLabel: string; rightValue: string; rightColor?: string; chips?: KeyHighlightChip[]; takeaway?: string }
@@ -250,6 +260,7 @@ export type HorizontalBarRow = {
   name: string;
   value: number;
   valueLabel?: string;
+  subentity?: SubentityItem[];
 };
 
 // ─── Dual-Segment Horizontal Bar Chart Types ─────────────────────────────────

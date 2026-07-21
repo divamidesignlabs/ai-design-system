@@ -2,9 +2,7 @@ import type { CSSProperties } from 'react';
 
 export const styles: Record<string, CSSProperties> = {
   page: {
-    height: '100vh',
-    overflowY: 'auto',
-    background: '#0d1424',
+    minHeight: '100vh',
     padding: '32px 40px',
     fontFamily: "'Satoshi Variable', 'DM Sans', sans-serif",
     color: '#ccd6f6',

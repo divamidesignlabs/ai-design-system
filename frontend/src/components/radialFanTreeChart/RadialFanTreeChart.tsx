@@ -5,6 +5,7 @@ import { useCanvasInteraction, registerHitCircle } from '../../canvas/useCanvasI
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { stagger, tickHoverProgress, easeOutCubic } from '../../canvas/easing';
 import { CC, CHART_PALETTE, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, setupCanvas } from '../../canvas/canvasUtils';
+import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { formatNumber } from '../../utils/numberFormat';
 import type { NCEContractorRow } from '../../types';
@@ -15,17 +16,21 @@ const MIN_H = 320;
 const PAD_V = 60;
 const MIN_LEAF_SPACING = 28;
 
-export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContractor = [], dataByEntity, onItemClick, selectedId, width = DEFAULT_W, colorOffset = 0, testID }: RadialFanTreeChartProps) {
+export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContractor = [], dataByEntity, onItemClick, selectedId, colorOffset = 0, testID }: RadialFanTreeChartProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
   const frameRef = useRef(0);
   const selectedIdRef  = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
+  const byContractorRef = useRef<NCEContractorRow[]>([]);
+
   const handleClick = useCallback((id: string, data: TooltipContent | string) => {
     if (id === '__root__') return;
     const label = typeof data === 'object' ? (data.label ?? id) : id;
-    onItemClick?.(id, label);
+    const item = byContractorRef.current.find(c => c.id === id);
+    onItemClick?.(id, label, item?.subentity);
   }, [onItemClick]);
 
   const isDrillMode = !!(selectedId && dataByEntity?.[selectedId]);
@@ -38,6 +43,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
     () => (activeRawItems as unknown[]).filter((c): c is NCEContractorRow => c != null && typeof c === 'object'),
     [activeRawItems],
   );
+  byContractorRef.current = byContractor;
 
   const fanH = useMemo(
     () => Math.max(MIN_H, PAD_V + Math.max(0, byContractor.length - 1) * MIN_LEAF_SPACING),
@@ -45,24 +51,24 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
   );
   const H = fanH;
 
-  const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width, height: fanH, onClick: onItemClick ? handleClick : undefined });
+  const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width: W, height: fanH, onClick: onItemClick ? handleClick : undefined });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = setupCanvas(canvas, width, H);
+    const ctx = setupCanvas(canvas, W, H);
     frameRef.current = 0;
     const DURATION = 72;
 
-    const rootX = 88;
+    const rootX = 60;
     const rootY = fanH / 2;
-    const rootR = 32;
+    const rootR = 40;
     const splitX = rootX + rootR + 60; // single stem ends here, branches fan out from this point
-    const leafX = width - 200;
-    const maxCount = Math.max(...byContractor.map(c => c.count ?? 0), 1);
-    const maxLeafR = 22;
-    const minLeafR = 8;
-    const leafSpacing = byContractor.length > 1 ? (fanH - 60) / (byContractor.length - 1) : 0;
+    const leafX = W - 140;
+    const maxCount = Math.max(...byContractor.map(c => Math.abs(c.count ?? 0)), 1);
+    const leafSpacing = byContractor.length > 1 ? (fanH - 60) / (byContractor.length - 1) : 60;
+    const maxLeafR = Math.min(22, leafSpacing / 2 - 3);
+    const minLeafR = Math.min(8, Math.max(3, maxLeafR - 6));
     const leafStartY = 30;
     const labelX = leafX + maxLeafR + 10; // fixed left-align for all leaf labels
 
@@ -76,7 +82,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
     const draw = () => {
       frameRef.current++;
       const T = frameRef.current;
-      ctx.clearRect(0, 0, width, H);
+      ctx.clearRect(0, 0, W, H);
       ctx.letterSpacing = AXIS_LABEL.letterSpacing;
 
       const rawP = Math.min(T / DURATION, 1);
@@ -105,7 +111,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
         const localP = stagger(progress, i, byContractor.length, easeOutCubic);
         const lpos = leafPositions[i];
         const hp = hoverMap.current.get(c.id) ?? 0;
-        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.15 : 1;
+        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.6 : 1;
 
         if (localP < 0.01) return;
 
@@ -134,7 +140,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
         // Leaf node — radius scales with count
         if (localP > 0.85) {
           const leafFade = Math.min(1, (localP - 0.85) / 0.15);
-          const leafR = minLeafR + ((c.count ?? 0) / maxCount) * (maxLeafR - minLeafR);
+          const leafR = minLeafR + (Math.abs(c.count ?? 0) / maxCount) * (maxLeafR - minLeafR);
 
           drawGlow(ctx, lpos.x, lpos.y, leafR * 2, color, (0.2 + hp * 0.2) * leafFade * dimFactor);
           ctx.beginPath();
@@ -148,7 +154,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
             value: displayVal,
             sublabel: `${Math.round(((c.count ?? 0) / (activeTotal || 1)) * 100)}% of total`,
             color,
-          });
+          }, W);
 
           // Labels — fixed labelX for consistent left alignment
           ctx.globalAlpha = leafFade * dimFactor;
@@ -189,7 +195,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
       if (progress > 0.4) {
         const fade = Math.min(1, (progress - 0.4) / 0.4);
         ctx.globalAlpha = fade;
-        const fullValue = activeTotalLabel ?? formatNumber(activeTotal, 0);
+        const fullValue = formatNumber(activeTotal);
         const maxTextW = rootR * 1.7;
         ctx.font = `500 16px 'Satoshi Variable', 'DM Sans', sans-serif`;
         let truncated = fullValue;
@@ -207,7 +213,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
 
       registerHitCircle(hitZonesRef.current, '__root__', rootX, rootY, rootR, {
         label: activeTotalLabel ?? 'Total',
-        value: formatNumber(activeTotal, 0),
+        value: formatNumber(activeTotal),
         sublabel: `${byContractor.length} items`,
         color,
       });
@@ -217,20 +223,26 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [activeTotal, activeTotalLabel, byContractor, fanH, width, isDrillMode]);
+  }, [activeTotal, activeTotalLabel, byContractor, fanH, W, isDrillMode]);
 
   const isEmpty = byContractor.length === 0;
-  if (isEmpty) return <ChartEmptyState width={width} height={MIN_H} testID={testID} />;
+  if (isEmpty) {
+    return (
+      <div ref={containerRef} style={{ width: '100%' }}>
+        <ChartEmptyState width={W} height={MIN_H} testID={testID} />
+      </div>
+    );
+  }
 
   return (
-    <div data-testid={testID} style={{ position: 'relative', width, height: H }}>
+    <div ref={containerRef} data-testid={testID} style={{ position: 'relative', width: '100%', height: H }}>
       <canvas
         ref={canvasRef}
         role="img"
         aria-label="NCE fault tree — NCEs per contractor as branching tree"
-        style={{ width, height: H, display: 'block' }}
+        style={{ width: '100%', height: H, display: 'block' }}
       />
-      <CanvasTooltip {...tooltip} parentW={width} parentH={H} />
+      <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
     </div>
   );
 }

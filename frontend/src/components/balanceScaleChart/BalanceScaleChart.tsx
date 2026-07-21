@@ -1,19 +1,36 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 
-import { CC, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, setupCanvas } from '../../canvas/canvasUtils';
+import { CanvasTooltip } from '../../canvas/CanvasTooltip';
+import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
+import type { TooltipContent } from '../../canvas/useCanvasInteraction';
+import { CC, AXIS_LABEL, rgb, drawGlow, setupCanvas } from '../../canvas/canvasUtils';
 import { easeOutBack, easeOutCubic } from '../../canvas/easing';
 import type { BalanceScaleChartProps } from './types';
 
 const W = 780;
 const H = 420;
 
-export function BalanceScaleChart({ left, right, leftTitle = 'Accepted', rightTitle = 'Submitted', unit = 'quotations', selectedId, dataByEntity, testID }: BalanceScaleChartProps) {
+export function BalanceScaleChart({ left, right, leftTitle = 'Accepted', rightTitle = 'Submitted', unit = 'quotations', selectedId, dataByEntity, onItemClick, testID }: BalanceScaleChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
 
   const activeData  = selectedId && dataByEntity?.[selectedId] ? dataByEntity[selectedId] : { left, right };
   const activeLeft  = activeData.left;
   const activeRight = activeData.right;
+
+  const activeSidesRef = useRef({ left: activeLeft, right: activeRight, leftTitle, rightTitle });
+  activeSidesRef.current = { left: activeLeft, right: activeRight, leftTitle, rightTitle };
+
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+
+  const handleClick = useCallback((id: string, data: TooltipContent | string) => {
+    const label = typeof data === 'object' ? (data.label ?? id) : id;
+    const side = id === 'left' ? activeSidesRef.current.left : activeSidesRef.current.right;
+    onItemClick?.(id, label, side?.subentity);
+  }, [onItemClick]);
+
+  const { hitZonesRef, tooltip, hoveredRef: _hoveredRef } = useCanvasInteraction(canvasRef, { width: W, height: H, onClick: onItemClick ? handleClick : undefined });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -114,6 +131,7 @@ export function BalanceScaleChart({ left, right, leftTitle = 'Accepted', rightTi
       const T = frameRef.current;
       ctx.clearRect(0, 0, W, H);
       ctx.letterSpacing = AXIS_LABEL.letterSpacing;
+      hitZonesRef.current = [];
 
       const rawP     = Math.min(T / DURATION, 1);
       const progress = easeOutCubic(rawP);
@@ -144,35 +162,41 @@ export function BalanceScaleChart({ left, right, leftTitle = 'Accepted', rightTi
       const leftPanH  = Math.max(20, (absLeft  / maxVal) * 95 * progress);
       const rightPanH = Math.max(20, (absRight / maxVal) * 95 * progress);
 
-      drawPan(CC.green, leftEnd.x,  leftEnd.y,  leftPanH,  progress);
-      drawPan(CC.amber, rightEnd.x, rightEnd.y, rightPanH, progress);
+      const leftDim  = selectedIdRef.current === 'right' ? 0.6 : 1;
+      const rightDim = selectedIdRef.current === 'left'  ? 0.6 : 1;
+
+      drawPan(CC.green, leftEnd.x,  leftEnd.y,  leftPanH,  progress * leftDim);
+      drawPan(CC.amber, rightEnd.x, rightEnd.y, rightPanH, progress * rightDim);
+
+      const LABEL_ZONE_H  = 90;
+      const leftPanBot    = leftEnd.y  + strLen + leftPanH;
+      const rightPanBot   = rightEnd.y + strLen + rightPanH;
+      registerHitRect(hitZonesRef.current, 'left',  leftEnd.x  - panW / 2, leftEnd.y  + strLen, panW, leftPanH  + LABEL_ZONE_H, { label: leftTitle,  value: activeLeft.label,  sublabel: `${activeLeft.count} ${unit}`,  color: CC.green }, H, leftEnd.x,  leftPanBot  + 102);
+      registerHitRect(hitZonesRef.current, 'right', rightEnd.x - panW / 2, rightEnd.y + strLen, panW, rightPanH + LABEL_ZONE_H, { label: rightTitle, value: activeRight.label, sublabel: `${activeRight.count} ${unit}`, color: CC.amber }, H, rightEnd.x, rightPanBot + 102);
 
       // Labels
       if (progress > 0.5) {
         const fade  = Math.min(1, (progress - 0.5) / 0.5);
-        ctx.globalAlpha  = fade;
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'top';
 
         const leftPanBottom  = leftEnd.y  + strLen + leftPanH  + 14;
         const rightPanBottom = rightEnd.y + strLen + rightPanH + 14;
 
-        // Left value
+        // Left value + sub-label
+        ctx.globalAlpha = fade * leftDim;
         ctx.font      = `700 34px 'Satoshi Variable', 'DM Sans', sans-serif`;
         ctx.fillStyle = CC.t1;
         ctx.fillText(activeLeft.label, leftEnd.x, leftPanBottom);
-
-        // Left sub-label
         ctx.font      = AXIS_LABEL.font;
         ctx.fillStyle = AXIS_LABEL.color;
         ctx.fillText(`${leftTitle} ${activeLeft.count} ${unit}`, leftEnd.x, leftPanBottom + 42);
 
-        // Right value
+        // Right value + sub-label
+        ctx.globalAlpha = fade * rightDim;
         ctx.font      = `700 34px 'Satoshi Variable', 'DM Sans', sans-serif`;
         ctx.fillStyle = CC.t1;
         ctx.fillText(activeRight.label, rightEnd.x, rightPanBottom);
-
-        // Right sub-label
         ctx.font      = AXIS_LABEL.font;
         ctx.fillStyle = AXIS_LABEL.color;
         ctx.fillText(`${rightTitle} ${activeRight.count} ${unit}`, rightEnd.x, rightPanBottom + 42);
@@ -189,13 +213,14 @@ export function BalanceScaleChart({ left, right, leftTitle = 'Accepted', rightTi
   }, [activeLeft, activeRight]);
 
   return (
-    <div data-testid={testID} style={{ position: 'relative', width: W, height: H }}>
+    <div data-testid={testID} style={{ position: 'relative', width: '100%', maxWidth: W }}>
       <canvas
         ref={canvasRef}
         role="img"
         aria-label="Quotation balance — accepted vs submitted quotation value"
-        style={{ width: W, height: H, display: 'block', borderRadius: 8 }}
+        style={{ width: '100%', aspectRatio: `${W} / ${H}`, display: 'block', borderRadius: 8 }}
       />
+      <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
     </div>
   );
 }

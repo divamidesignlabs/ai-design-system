@@ -1,10 +1,11 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useCallback } from "react";
 
 import { CanvasTooltip } from "../../canvas/CanvasTooltip";
 import {
   useCanvasInteraction,
   registerHitRect,
 } from "../../canvas/useCanvasInteraction";
+import type { TooltipContent } from "../../canvas/useCanvasInteraction";
 import { dampedPulse } from "../../canvas/easing";
 import {
   CC,
@@ -16,23 +17,24 @@ import {
   drawScanline,
   setupCanvas,
 } from "../../canvas/canvasUtils";
+import { useContainerWidth } from "../../canvas/useContainerWidth";
 import { ChartEmptyState } from "../common/ChartEmptyState";
 import { formatNumber } from "../../utils/numberFormat";
 import type { EWOpenContractorRow } from "../../types";
 import type { RankedCardLeaderboardProps } from "./types";
 
-const MAX_W = 780;
+const DEFAULT_W = 780;
 const H = 240;
 const CARD_PAD = 12;
 const CARD_GAP = 10;
 const MAX_COLS = 5;
-// Card width fixed at MAX_W proportions so card size stays consistent regardless of item count
-const CARD_W = (MAX_W - 2 * CARD_PAD - (MAX_COLS - 1) * CARD_GAP) / MAX_COLS;
 
 export function RankedCardLeaderboard({
   items: rawItems = [],
+  onItemClick,
   testID,
 }: RankedCardLeaderboardProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
   const hoverMap = useRef<Map<string, number>>(new Map());
@@ -49,21 +51,31 @@ export function RankedCardLeaderboard({
     .slice(0, 5);
   const total = sorted.reduce((s, c) => s + (c.count ?? 0), 0);
 
+  const sortedRef = useRef(sorted);
+  sortedRef.current = sorted;
+
+  const handleClick = useCallback((id: string, data: TooltipContent | string) => {
+    const label = typeof data === 'object' ? (data.label ?? id) : id;
+    const item = sortedRef.current.find(c => c.id === id);
+    onItemClick?.(id, label, item?.subentity);
+  }, [onItemClick]);
+
   const cols = Math.min(MAX_COLS, sorted.length);
-  const dynamicW = cols > 0 ? 2 * CARD_PAD + cols * CARD_W + (cols - 1) * CARD_GAP : MAX_W;
+  const cardW = cols > 0
+    ? (W - 2 * CARD_PAD - (cols - 1) * CARD_GAP) / cols
+    : (W - 2 * CARD_PAD) / MAX_COLS;
 
   const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, {
-    width: dynamicW,
+    width: W,
     height: H,
+    onClick: onItemClick ? handleClick : undefined,
   });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = setupCanvas(canvas, dynamicW, H);
+    const ctx = setupCanvas(canvas, W, H);
     frameRef.current = 0;
-
-    const cardW = CARD_W;
     const cardH = H * 0.84;
     const cardY = H * 0.08;
     const startX  = CARD_PAD;
@@ -73,7 +85,7 @@ export function RankedCardLeaderboard({
     const draw = () => {
       frameRef.current++;
       const T = frameRef.current;
-      ctx.clearRect(0, 0, dynamicW, H);
+      ctx.clearRect(0, 0, W, H);
       ctx.letterSpacing = AXIS_LABEL.letterSpacing;
       hitZonesRef.current = [];
 
@@ -208,31 +220,31 @@ export function RankedCardLeaderboard({
         );
       });
 
-      drawScanline(ctx, dynamicW, H, T, 0.015);
+      drawScanline(ctx, W, H, T, 0.015);
 
       raf = requestAnimationFrame(draw);
     };
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [sorted, total, dynamicW]);
+  }, [sorted, total, W]);
 
   const isEmpty = sorted.length === 0;
   if (isEmpty)
-    return <ChartEmptyState width={dynamicW} height={H} testID={testID} />;
+    return <ChartEmptyState width={W} height={H} testID={testID} />;
 
   return (
     <div
       data-testid={testID}
-      style={{ position: "relative", width: dynamicW, height: H }}
+      style={{ position: "relative", width: W, height: H }}
     >
       <canvas
         ref={canvasRef}
         role="img"
         aria-label="Contractor rank — open EW count per contractor"
-        style={{ width: dynamicW, height: H, display: "block", borderRadius: 8 }}
+        style={{ width: W, height: H, display: "block", borderRadius: 8 }}
       />
-      <CanvasTooltip {...tooltip} parentW={dynamicW} parentH={H} />
+      <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
     </div>
   );
 }

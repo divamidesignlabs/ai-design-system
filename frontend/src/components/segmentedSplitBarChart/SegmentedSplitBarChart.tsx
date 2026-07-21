@@ -5,6 +5,7 @@ import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInt
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { stagger, tickHoverProgress, easeOutQuart } from '../../canvas/easing';
 import { CC, LEGEND_LABEL, CHART_VALUE, rgb, drawGlow, setupCanvas, AXIS_LABEL } from '../../canvas/canvasUtils';
+import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
 import { formatNumber } from '../../utils/numberFormat';
@@ -18,26 +19,30 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return t + '…';
 }
 
-const W          = 680;
+const DEFAULT_W  = 680;
 const MAX_ITEMS  = 8;
-const BAR_H      = 6;
+const BAR_H      = 4;
 const INNER_GAP  = 8;
 const PAIR_H     = BAR_H * 2 + INNER_GAP;
 const PAIR_GAP   = 36;
-const PAD_T      = 16;
+const PAD_T      = PAIR_GAP / 2;
 const PAD_B      = 48;
 
 export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, onItemClick, selectedId, labelA = 'Implemented', labelB = 'Unimplemented', unit = 'variations', testID }: SegmentedSplitBarChartProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
   const frameRef = useRef(0);
   const selectedIdRef  = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
+  const visibleRef = useRef<VariationRow[]>([]);
+
   const handleClick = useCallback((id: string, data: TooltipContent | string) => {
     const rawId = id.replace(/-impl$|-un$/, '');
     const label = typeof data === 'object' ? (data.label ?? rawId) : rawId;
-    onItemClick?.(rawId, label);
+    const item = visibleRef.current.find(c => c.id === rawId);
+    onItemClick?.(rawId, label, item?.subentity);
   }, [onItemClick]);
   const [showAll, setShowAll] = useState(false);
 
@@ -57,6 +62,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
     () => showAll ? activeItems : activeItems.slice(0, MAX_ITEMS),
     [activeItems, showAll],
   );
+  visibleRef.current = visible;
 
   const H = PAD_T + PAD_B + visible.length * (PAIR_H + PAIR_GAP) - PAIR_GAP;
 
@@ -69,8 +75,15 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
     frameRef.current = 0;
     const DURATION = 60;
 
-    const padL   = 150;
-    const padR   = 100;
+    ctx.font = AXIS_LABEL.font;
+    const maxLabelW = visible.reduce((acc, c) => Math.max(acc, ctx.measureText(c.abbreviation ?? c.name ?? '').width), 0);
+    ctx.font = CHART_VALUE.font;
+    const maxValW = visible.reduce((acc, c) => Math.max(acc,
+      ctx.measureText(formatNumber(c.implemented ?? 0)).width,
+      ctx.measureText(formatNumber(c.unimplemented ?? 0)).width,
+    ), 0);
+    const padL   = Math.max(Math.min(maxLabelW + 20, W * 0.3), 40);
+    const padR   = Math.max(maxValW + 24, 32);
     const trackW = W - padL - padR;
     const maxVal = Math.max(
       ...visible.map(c => c.implemented   ?? 0),
@@ -102,7 +115,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         const unimplId = `${c.id}-un`;
         const hpImpl  = hoverMap.current.get(implId) ?? 0;
         const hpUn    = hoverMap.current.get(unimplId) ?? 0;
-        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.2 : 1;
+        const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.6 : 1;
         const implW   = ((c.implemented   ?? 0) / maxVal) * trackW * localP;
         const unimplW = ((c.unimplemented ?? 0) / maxVal) * trackW * localP;
 
@@ -114,13 +127,13 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         ctx.fillText(truncate(ctx, c.abbreviation ?? c.name ?? '', padL - 16), padL - 8, pairY + PAIR_H / 2);
         ctx.textBaseline = 'alphabetic';
 
-        // Hit zone on name area
+        // Hit zone on name area — centerXOverride at bar tip for connector routing
         registerHitRect(hitZonesRef.current, implId, 0, pairY, padL, PAIR_H, {
           label: c.name ?? c.abbreviation ?? '',
           value: `${formatNumber((c.implemented ?? 0) + (c.unimplemented ?? 0))} total ${unit}`,
           sublabel: `${labelA}: ${formatNumber(c.implemented ?? 0)} · ${labelB}: ${formatNumber(c.unimplemented ?? 0)}`,
           color: CC.green,
-        });
+        }, undefined, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // ── Implemented bar (green) ─────────────────────────────────────────
         if (implW > 0) {
@@ -135,7 +148,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         }
         registerHitRect(hitZonesRef.current, implId, padL, yImpl, Math.max(implW, 1), BAR_H, {
           label: c.name, value: formatNumber(c.implemented ?? 0), color: CC.green,
-        });
+        }, pairY + PAIR_H / 2, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // Value label right of impl bar
         if (localP > 0.4) {
@@ -163,7 +176,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         }
         registerHitRect(hitZonesRef.current, unimplId, padL, yUniml, Math.max(unimplW, 1), BAR_H, {
           label: c.name, value: formatNumber(c.unimplemented ?? 0), color: CC.amber,
-        });
+        }, pairY + PAIR_H / 2, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // Value label right of uniml bar
         if (localP > 0.4) {
@@ -223,19 +236,25 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [visible, H]);
+  }, [visible, H, W]);
 
   const isEmpty = items.length === 0;
-  if (isEmpty) return <ChartEmptyState width={W} height={160} testID={testID} />;
+  if (isEmpty) {
+    return (
+      <div ref={containerRef} style={{ width: '100%' }}>
+        <ChartEmptyState width={W} height={160} testID={testID} />
+      </div>
+    );
+  }
 
   return (
-    <div data-testid={testID} style={{ width: W }}>
-      <div style={{ position: 'relative', width: W, height: H }}>
+    <div ref={containerRef} data-testid={testID} style={{ width: '100%' }}>
+      <div style={{ position: 'relative', height: H }}>
         <canvas
           ref={canvasRef}
           role="img"
           aria-label="Implemented vs unimplemented variations per contractor — split bar"
-          style={{ width: W, height: H, display: 'block' }}
+          style={{ width: '100%', height: H, display: 'block' }}
         />
         <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
       </div>

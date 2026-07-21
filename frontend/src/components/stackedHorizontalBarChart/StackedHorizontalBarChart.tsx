@@ -6,12 +6,13 @@ import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutQuart, stagger, tickHoverProgress } from '../../canvas/easing';
 import { CC, AXIS_LABEL, CHART_VALUE, LEGEND_LABEL, rgb, drawGlow } from '../../canvas/canvasUtils';
 import { useCanvasLoop } from '../../canvas/useCanvasLoop';
+import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
 import type { ContractorRow } from '../../types';
 import type { StackedHorizontalBarChartProps } from './types';
 
-const W        = 680;
+const DEFAULT_W = 680;
 const MIN_H    = 220;
 const MAX_ITEMS = 8;
 const COLORS   = [CC.teal];
@@ -35,6 +36,7 @@ function fmtValue(v: number): string {
 }
 
 export function StackedHorizontalBarChart({ data, dataByEntity, onItemClick, selectedId, testID }: StackedHorizontalBarChartProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap  = useRef<Map<string, number>>(new Map());
   const selectedIdRef  = useRef(selectedId);
@@ -42,7 +44,8 @@ export function StackedHorizontalBarChart({ data, dataByEntity, onItemClick, sel
 
   const handleClick = useCallback((id: string, data: TooltipContent | string) => {
     const label = typeof data === 'object' ? (data.label ?? id) : id;
-    onItemClick?.(id, label);
+    const item = drawStateRef.current.visibleItems.find(c => c.id === id);
+    onItemClick?.(id, label, item?.subentity);
   }, [onItemClick]);
   const [showAll, setShowAll] = useState(false);
 
@@ -117,10 +120,7 @@ export function StackedHorizontalBarChart({ data, dataByEntity, onItemClick, sel
         const unfilledX  = x0 + totalW;
         const unfilledW  = animTrackW - totalW;
         if (unfilledW > 2) {
-          const unGrad = ctx.createLinearGradient(unfilledX, 0, x0 + animTrackW, 0);
-          unGrad.addColorStop(0, rgb(CC.tealDark, 0.55));
-          unGrad.addColorStop(1, rgb(CC.tealDark, 0.22));
-          ctx.fillStyle = unGrad;
+          ctx.fillStyle = rgb(CC.barBg, 0.2);
           ctx.beginPath();
           ctx.rect(unfilledX, y, unfilledW, BAR_H);
           ctx.fill();
@@ -211,17 +211,21 @@ export function StackedHorizontalBarChart({ data, dataByEntity, onItemClick, sel
   );
 
   if (isEmpty) {
-    return <ChartEmptyState width={W} height={MIN_H} message="No contract data available" testID={testID} />;
+    return (
+      <div ref={containerRef} style={{ width: '100%' }}>
+        <ChartEmptyState width={W} height={MIN_H} message="No contract data available" testID={testID} />
+      </div>
+    );
   }
 
   return (
-    <div data-testid={testID} style={{ width: W, transition: 'all 0.25s ease' }}>
+    <div ref={containerRef} data-testid={testID} style={{ width: '100%' }}>
       <div style={{ position: 'relative' }}>
         <canvas
           ref={canvasRef}
           role="img"
           aria-label="Total contract value per contractor — horizontal bar chart"
-          style={{ width: W, height: dynamicH, display: 'block', borderRadius: 8 }}
+          style={{ width: '100%', height: dynamicH, display: 'block', borderRadius: 8 }}
         />
         <CanvasTooltip {...tooltip} parentW={W} parentH={dynamicH} />
       </div>

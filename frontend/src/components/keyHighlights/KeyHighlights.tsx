@@ -67,7 +67,7 @@ function ChipRow({ chips = [] }: { chips: KeyHighlightChip[] }) {
 // ─── Stats ───────────────────────────────────────────────────────────────────
 // 3 equal tiles — large number, small label, colored top border
 // Used for: Q1, Q11, Q12
-function Stats({ items = [] }: { items: Array<{ value: string; label: string; color?: string; icon?: string }> }) {
+function Stats({ items = [] }: { items: Array<{ value: string; label: string; sublabel?: string; color?: string; icon?: string }> }) {
   const visible = items.filter(item => item.value);
   if (visible.length === 0) return null;
   return (
@@ -90,8 +90,15 @@ function Stats({ items = [] }: { items: Array<{ value: string; label: string; co
             <div style={{ ...VALUE, color: '#FFFFFF' }}>
               {item.value}
             </div>
-            <div style={{ ...LABEL, color: 'rgba(255,255,255,0.70)' }}>
-              {item.label}
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+              <div style={{ ...LABEL, color: 'rgba(255,255,255,0.70)' }}>
+                {item.label}
+              </div>
+              {item.sublabel && (
+                <div style={{ ...LABEL, fontSize: 14, color: 'rgba(255,255,255,0.45)' }}>
+                  {item.sublabel}
+                </div>
+              )}
             </div>
           </div>
           {item.icon && (

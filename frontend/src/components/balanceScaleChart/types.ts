@@ -1,4 +1,4 @@
-import type { QuotationSide, QuotationSummary } from '../../types';
+import type { QuotationSide, QuotationSummary, SubentityPayload } from '../../types';
 
 export interface BalanceScaleChartProps {
   left: QuotationSide;
@@ -8,5 +8,6 @@ export interface BalanceScaleChartProps {
   unit?: string;
   selectedId?: string;
   dataByEntity?: Record<string, QuotationSummary>;
+  onItemClick?: (id: string, label: string, subentity?: SubentityPayload) => void;
   testID?: string;
 }

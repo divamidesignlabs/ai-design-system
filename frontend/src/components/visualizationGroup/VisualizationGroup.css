@@ -1,0 +1,166 @@
+.viz-group {
+  width: 100%;
+}
+
+.viz-group__title {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #F7F9FA;
+  white-space: nowrap;
+  margin: 0 0 12px 4px;
+}
+
+.viz-group__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  padding: 0 4px;
+}
+
+.viz-group__hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.03em;
+}
+
+
+.viz-group__reset-btn {
+  background: none;
+  color: #69DFE9;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0px;
+  text-align: center;
+  padding: 0px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+
+.viz-group__reset-btn:hover {
+  border-color: #69DFE9;
+  opacity: 0.8;
+}
+
+.viz-group__reset-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Side-by-side chart row ── */
+.viz-group__charts {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.viz-group__chart {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 16px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.viz-group__chart--listener {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Balance scale broadcaster: no right gap so the L-path meets the connector column flush */
+.viz-group__chart--balance-scale-chart:not(.viz-group__chart--listener) {
+  padding-right: 0;
+}
+
+/* Route SVG overlay — spans the full charts row, coordinates are container-relative */
+.viz-group__route-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 3;
+}
+
+.viz-group__listener-label {
+  min-height: 24px;
+  line-height: 24px;
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0px;
+  color: #B3B5B6;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viz-group__chart--listener::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid rgba(179, 181, 182, 0.18);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Broadcaster → Listener connector ── */
+.viz-group__connector {
+  flex: 0 0 56px;
+  align-self: stretch;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.viz-group__connector--active {
+  opacity: 1;
+}
+
+.viz-group__connector-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.viz-group__connector-tick {
+  stroke: rgba(179, 181, 182, 0.8);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.viz-group__connector-path {
+  stroke: rgba(179, 181, 182, 0.6);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  fill: none;
+}
+
+.viz-group__connector-dot {
+  fill: rgba(179, 181, 182, 0.95);
+  filter: drop-shadow(0 0 4px rgba(179, 181, 182, 0.5));
+}

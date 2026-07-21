@@ -4,18 +4,19 @@ import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitCircle, registerHitRect } from '../../canvas/useCanvasInteraction';
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutCubic } from '../../canvas/easing';
-import { CC, CHART_PALETTE, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, drawDust, drawScanline, setupCanvas } from '../../canvas/canvasUtils';
+import { CC, GRAD_PALETTE, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, drawDust, drawScanline, setupCanvas } from '../../canvas/canvasUtils';
+import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
 import { formatNumber } from '../../utils/numberFormat';
 import type { ContractorRow } from '../../types';
 import type { ProgressRaceChartProps } from './types';
 
-const W          = 660;
-const TRACK_H    = 6;
+const DEFAULT_W  = 660;
+const TRACK_H    = 4;
 const TRACK_GAP  = 30;
-const PAD_T      = 24;
-const PAD_B      = 24;
+const PAD_T      = TRACK_GAP / 2;
+const PAD_B      = TRACK_GAP / 2;
 const MAX_ITEMS  = 8;
 
 
@@ -28,15 +29,19 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 
 
 export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemClick, selectedId, colorOffset = 0, testID }: ProgressRaceChartProps) {
+  const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef  = useRef(0);
   const hoverMap  = useRef<Map<string, number>>(new Map());
   const selectedIdRef  = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
+  const visibleRef = useRef<ContractorRow[]>([]);
+
   const handleClick = useCallback((id: string, data: TooltipContent | string) => {
     const label = typeof data === 'object' ? (data.label ?? id) : id;
-    onItemClick?.(id, label);
+    const item = visibleRef.current.find(c => c.id === id);
+    onItemClick?.(id, label, item?.subentity);
   }, [onItemClick]);
   const [showAll, setShowAll] = useState(false);
 
@@ -59,6 +64,7 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
     () => showAll ? sorted : sorted.slice(0, MAX_ITEMS),
     [sorted, showAll],
   );
+  visibleRef.current = visible;
   const n       = visible.length;
   const H       = PAD_T + PAD_B + n * TRACK_H + Math.max(0, n - 1) * TRACK_GAP;
 
@@ -70,11 +76,16 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
     const ctx = setupCanvas(canvas, W, H);
     frameRef.current = 0;
 
-    const padL   = 150;
-    const padR   = 100;
+    ctx.font = AXIS_LABEL.font;
+    ctx.letterSpacing = AXIS_LABEL.letterSpacing;
+    const maxLabelW = visible.reduce((acc, c) => Math.max(acc, ctx.measureText(c.name ?? c.abbreviation ?? '').width), 0);
+    ctx.font = CHART_VALUE.font;
+    const maxValW = visible.reduce((acc, c) => Math.max(acc, ctx.measureText(formatNumber(c.total ?? 0)).width), 0);
+    const padL   = Math.max(Math.min(maxLabelW + 20, W * 0.3), 40);
+    const padR   = Math.max(maxValW + 20, 28);
     const trackW = W - padL - padR;
 
-    const color = CHART_PALETTE[colorOffset % CHART_PALETTE.length];
+    const [gradFrom, gradTo] = GRAD_PALETTE[colorOffset % GRAD_PALETTE.length];
     let raf: number;
 
     const draw = () => {
@@ -99,20 +110,17 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
         hoverMap.current.set(hoveredRef.current, 0);
       }
 
-      drawDust(ctx, W, H, T, 40, rgb(CC.blue, 0.04));
+      drawDust(ctx, W, H, T, 40, rgb(gradTo, 0.04));
 
       const maxTotal = Math.max(...visible.map(c => c.total ?? 0), 1);
 
       visible.forEach((contractor, i) => {
-        const hp     = hoverMap.current.get(contractor.id) ?? 0;
-        const dimFactor = !isDrillMode && selectedIdRef.current && contractor.id !== selectedIdRef.current ? 0.2 : 1;
-        const trackY = PAD_T + i * (TRACK_H + TRACK_GAP);
+        const hp        = hoverMap.current.get(contractor.id) ?? 0;
+        const dimFactor = !isDrillMode && selectedIdRef.current && contractor.id !== selectedIdRef.current ? 0.6 : 1;
+        const trackY    = PAD_T + i * (TRACK_H + TRACK_GAP);
 
-        // Track background — same gradient style as StackedHorizontalBarChart unfilled portion
-        const trackGrad = ctx.createLinearGradient(padL, 0, padL + trackW, 0);
-        trackGrad.addColorStop(0, rgb(CC.tealDark, 0.55 + hp * 0.1));
-        trackGrad.addColorStop(1, rgb(CC.tealDark, 0.22 + hp * 0.08));
-        ctx.fillStyle = trackGrad;
+        // Track background
+        ctx.fillStyle = rgb(CC.barBg, 0.2);
         ctx.beginPath();
         ctx.rect(padL, trackY, trackW, TRACK_H);
         ctx.fill();
@@ -122,11 +130,11 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
         const animProg = Math.min(trackProgress, trackProgress * easeOutCubic(Math.min(1, T * 0.005)));
         const runnerX  = padL + trackW * animProg;
 
-        // Gradient fill bar
+        // Gradient fill bar — dark start → bright end
         if (runnerX > padL + 2) {
           const trailGrad = ctx.createLinearGradient(padL, 0, runnerX, 0);
-          trailGrad.addColorStop(0, rgb(color, 0.55 * dimFactor));
-          trailGrad.addColorStop(1, rgb(color, 0.90 * dimFactor));
+          trailGrad.addColorStop(0, rgb(gradFrom, 0.75 * dimFactor));
+          trailGrad.addColorStop(1, rgb(gradTo,   0.95 * dimFactor));
           ctx.fillStyle = trailGrad;
           ctx.beginPath();
           ctx.rect(padL, trackY, runnerX - padL, TRACK_H);
@@ -135,13 +143,13 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
 
         // Subtle glow at bar tip on hover
         if (hp > 0) {
-          drawGlow(ctx, runnerX, trackY + TRACK_H / 2, 12 * hp, color, 0.35 * hp);
+          drawGlow(ctx, runnerX, trackY + TRACK_H / 2, 12 * hp, gradTo, 0.35 * hp);
         }
 
         const hitData = {
           label: contractor.name,
           sublabel: contractor.totalLabel ?? (contractor.total != null ? formatNumber(contractor.total) : undefined),
-          color,
+          color: gradTo,
         };
         registerHitRect(
           hitZonesRef.current,
@@ -151,6 +159,8 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
           padL + trackW,
           TRACK_H + TRACK_GAP,
           hitData,
+          undefined,
+          padL + trackW + 12 + maxValW + 14,
         );
         registerHitCircle(
           hitZonesRef.current,
@@ -161,16 +171,16 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
           hitData,
         );
 
-        // Percentage label — fixed at right edge
+        // Value label — right edge
         ctx.font         = CHART_VALUE.font;
-        ctx.fillStyle    = hp > 0 ? rgb(color, 1 * dimFactor) : rgb(CC.t1, 0.85 * dimFactor);
+        ctx.fillStyle    = hp > 0 ? rgb(gradTo, 1 * dimFactor) : rgb(CC.t1, 0.85 * dimFactor);
         ctx.textAlign    = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(formatNumber(contractor.total ?? 0), padL + trackW + 12, trackY + TRACK_H / 2);
 
         // Left label: contractor name
         ctx.font      = AXIS_LABEL.font;
-        ctx.fillStyle = hp > 0 ? rgb(color, 1 * dimFactor) : rgb(CC.t2, 0.85 * dimFactor);
+        ctx.fillStyle = hp > 0 ? rgb(gradTo, 1 * dimFactor) : rgb(CC.t2, 0.85 * dimFactor);
         ctx.textAlign = 'right';
         ctx.fillText(truncate(ctx, contractor.name ?? contractor.abbreviation ?? '', padL - 16), padL - 8, trackY + TRACK_H / 2);
       });
@@ -182,19 +192,25 @@ drawScanline(ctx, W, H, T, 0.015);
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [visible, H, colorOffset]);
+  }, [visible, H, colorOffset, W]);
 
   const isEmpty = sorted.length === 0;
-  if (isEmpty) return <ChartEmptyState width={W} height={160} testID={testID} />;
+  if (isEmpty) {
+    return (
+      <div ref={containerRef} style={{ width: '100%' }}>
+        <ChartEmptyState width={W} height={160} testID={testID} />
+      </div>
+    );
+  }
 
   return (
-    <div data-testid={testID} style={{ width: W }}>
+    <div ref={containerRef} data-testid={testID} style={{ width: '100%' }}>
       <div style={{ position: 'relative' }}>
         <canvas
           ref={canvasRef}
           role="img"
           aria-label="Commitment race — contractors ranked by commitment percentage"
-          style={{ width: W, height: H, display: 'block', borderRadius: 8 }}
+          style={{ width: '100%', height: H, display: 'block', borderRadius: 8 }}
         />
         <CanvasTooltip {...tooltip} parentW={W} parentH={H} />
       </div>
