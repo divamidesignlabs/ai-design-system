@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { KeyHighlights } from '../../components/keyHighlights/KeyHighlights';
 import { MultiSegmentHorizontalBarChart } from '../../components/multiSegmentHorizontalBarChart';
 import { Trend } from '../../components/trend/Trend';
+import { VisualizationGroup } from '../../components/visualizationGroup/VisualizationGroup';
 import { VisualizationRenderer } from '../../components/visualizationRenderer/VisualizationRenderer';
 import { dualSegmentBarRows } from '../../mocks/workspace.mock';
 import type { KeyHighlightBlock } from '../../types';
@@ -160,6 +161,38 @@ const nceByContractorData = [
 ];
 const nceTotal = 431;
 const nceTotalLabel = 'Active Early Warnings';
+
+/**
+ * Q8b — visualization_group (progress-race-chart broadcaster -> radial-fan-tree-chart listener)
+ * Reproduces the exact "Open NCEs by Contractor & Approved NCEs by Area" payload that shipped
+ * without `subentity` on any broadcaster item — the click hint showed but nothing happened.
+ *
+ * "withSubentity" -> every broadcaster item carries subentity: hint shows AND drill-down works.
+ * "withoutSubentity" -> no broadcaster item carries subentity: hint must NOT render (the fix).
+ */
+const openNceListenerDefault = {
+  type: 'radial-fan-tree-chart' as const,
+  total: 159,
+  totalLabel: '159 Approved NCEs',
+  items: [
+    { id: 'area-meltshop', name: 'Meltshop', count: 148 },
+    { id: 'area-programme', name: 'Programme', count: 11 },
+  ],
+};
+
+const openNceBroadcasterItemsWithSubentity = [
+  { id: 'c-darlow', name: 'Darlow Lloyd', abbreviation: 'Darlow', base: 15, total: 8, percentage: 53.3, baseLabel: '15 NCEs', totalLabel: '8 Open',
+    subentity: { total: 8, totalLabel: '8 Open', items: [{ id: 'area-meltshop', name: 'Meltshop', count: 5 }, { id: 'area-programme', name: 'Programme', count: 3 }] } },
+  { id: 'c-wernick', name: 'Wernick', abbreviation: 'Wernic', base: 15, total: 15, percentage: 100, baseLabel: '15 NCEs', totalLabel: '15 Open',
+    subentity: { total: 15, totalLabel: '15 Open', items: [{ id: 'area-meltshop', name: 'Meltshop', count: 12 }, { id: 'area-programme', name: 'Programme', count: 3 }] } },
+  { id: 'c-asl', name: 'ASL', abbreviation: 'ASL', base: 15, total: 12, percentage: 80, baseLabel: '15 NCEs', totalLabel: '12 Open',
+    subentity: { total: 12, totalLabel: '12 Open', items: [{ id: 'area-meltshop', name: 'Meltshop', count: 9 }, { id: 'area-programme', name: 'Programme', count: 3 }] } },
+];
+
+// Same rows, `subentity` stripped -- this is the exact shape that produced the bug.
+const openNceBroadcasterItemsWithoutSubentity = openNceBroadcasterItemsWithSubentity.map(
+  ({ subentity: _subentity, ...rest }) => rest,
+);
 
 /**
  * Q9 — semi-circular-gauge-chart
@@ -590,6 +623,26 @@ export function ChartGalleryPage() {
       <h3>Q8 — radial-fan-tree-chart</h3>
       <VisualizationRenderer config={{ type: 'radial-fan-tree-chart', total: nceTotal, totalLabel: nceTotalLabel, items: nceByContractorData }} />
       <KeyHighlights block={HIGHLIGHTS.q8} />
+
+      <h3>Q8b — visualization_group WITH subentity (hint shows, drill-down works)</h3>
+      <VisualizationGroup
+        title="Open NCEs by Contractor & Approved NCEs by Area"
+        items={[
+          { type: 'progress-race-chart', items: openNceBroadcasterItemsWithSubentity },
+          openNceListenerDefault,
+        ]}
+        data-testid="gallery-viz-group-with-subentity"
+      />
+
+      <h3>Q8c — visualization_group WITHOUT subentity (bug repro — hint must stay hidden)</h3>
+      <VisualizationGroup
+        title="Open NCEs by Contractor & Approved NCEs by Area"
+        items={[
+          { type: 'progress-race-chart', items: openNceBroadcasterItemsWithoutSubentity },
+          openNceListenerDefault,
+        ]}
+        data-testid="gallery-viz-group-without-subentity"
+      />
 
       <h3>Q9 — semi-circular-gauge-chart</h3>
       <VisualizationRenderer config={{ type: 'semi-circular-gauge-chart', confirmed: compensationGaugeData.confirmed, total: compensationGaugeData.total, label: 'NCEs are confirmed compensation events' }} />
