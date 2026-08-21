@@ -1,9 +1,9 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useSyncExternalStore } from 'react';
 
 import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitCircle } from '../../canvas/useCanvasInteraction';
 import { easeOutCubic } from '../../canvas/easing';
-import { CC, AXIS_LABEL, CHART_PALETTE, rgb, setupCanvas } from '../../canvas/canvasUtils';
+import { CC, AXIS_LABEL, CHART_PALETTE, UI, rgb, setupCanvas, subscribeThemeChange, getThemeVersion } from '../../canvas/canvasUtils';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { formatNumber } from '../../utils/numberFormat';
 import type { QuotationTrendPoint } from '../../types';
@@ -30,6 +30,12 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const yAxisRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
+
+  // Unlike the other charts, this one stops its rAF loop after the entrance
+  // animation and paints labels only on the final frame — so it cannot pick up a
+  // palette change on its own. Re-running the draw effect on a theme change is
+  // what keeps its ink in step with the theme.
+  const themeVersion = useSyncExternalStore(subscribeThemeChange, getThemeVersion, getThemeVersion);
 
   const activeRaw = selectedId && seriesByEntity?.[selectedId] ? seriesByEntity[selectedId] : rawPoints;
 
@@ -314,7 +320,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [points, chartCanvasW, minStep, hitZonesRef, colorOffset, animationEnabled]);
+  }, [points, chartCanvasW, minStep, hitZonesRef, colorOffset, animationEnabled, themeVersion]);
 
   const isEmpty = points.length === 0;
   if (isEmpty) return <ChartEmptyState width={MIN_W} height={H} testID={testID} />;
@@ -342,7 +348,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
           </div>
         </div>
       </div>
-      <div style={{ paddingLeft: PAD_L, textAlign: 'center', fontSize: 16, color: AXIS_LABEL.color, fontFamily: "'Satoshi Variable', 'DM Sans', sans-serif", marginTop: 4 }}>
+      <div style={{ paddingLeft: PAD_L, textAlign: 'center', fontSize: 16, color: UI.axisLabel, fontFamily: "'Satoshi Variable', 'DM Sans', sans-serif", marginTop: 4 }}>
         {xLabel}
       </div>
     </div>

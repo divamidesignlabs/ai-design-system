@@ -1,3 +1,5 @@
+import { UI } from '../../canvas/canvasUtils';
+
 interface ChartEmptyStateProps {
   width: number;
   height: number;
@@ -21,8 +23,8 @@ export function ChartEmptyState({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 8,
-        background: 'rgba(255,255,255,0.03)',
-        color: 'rgba(255,255,255,0.35)',
+        background: UI.emptyBg,
+        color: UI.emptyText,
         fontSize: 14,
         fontFamily: "'Satoshi Variable', 'DM Sans', sans-serif",
       }}

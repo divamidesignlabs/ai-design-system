@@ -1,11 +1,11 @@
 import type React from 'react';
 
-import { CC } from '../../canvas/canvasUtils';
+import { UI } from '../../canvas/canvasUtils';
 
 const SANS = "'Satoshi Variable', 'DM Sans', sans-serif";
 
 const LABEL: React.CSSProperties = {
-  color:      '#C2C2C2',
+  color:      UI.takeaway,
   fontFamily: SANS,
   fontSize:   18,
   fontWeight: 400,
@@ -24,7 +24,7 @@ export function Takeaway({ text }: { text: string }) {
     >
       <span
         style={{
-          fontSize: 18, fontWeight: 500, color: CC.t1,
+          fontSize: 18, fontWeight: 500, color: UI.text1,
           fontFamily: SANS, lineHeight: 1.65,
           marginRight: 8,
         }}

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { TooltipContent, TooltipState } from './useCanvasInteraction';
-import { CC } from './canvasUtils';
+import { UI } from './canvasUtils';
 
 interface CanvasTooltipProps extends TooltipState {
   parentW?: number;
@@ -43,11 +43,15 @@ export function CanvasTooltip({ visible, x, y, content, parentW, parentH }: Canv
     el.style.transform = `translate(${tx}px, ${ty}px)`;
     el.style.opacity = visible ? '1' : '0';
 
+    // A series colour wins when the hovered item carries one; otherwise fall
+    // back to the palette default as a var() reference rather than a resolved
+    // value, so the accent bar follows a theme change even if the pointer never
+    // moves again (this effect only re-runs on hover).
     const accent =
       content && typeof content === 'object' && (content as TooltipContent).color
         ? (content as TooltipContent).color
-        : CC.blue;
-    el.style.setProperty('--tooltip-accent', accent ?? CC.blue);
+        : UI.blue;
+    el.style.setProperty('--tooltip-accent', accent ?? UI.blue);
   }, [visible, x, y, parentW, content]);
 
   if (!content) return null;
@@ -66,8 +70,8 @@ export function CanvasTooltip({ visible, x, y, content, parentW, parentH }: Canv
         left: 0,
         minWidth: 80,
         pointerEvents: 'none',
-        background: CC.sf,
-        border: `1px solid ${CC.bd}`,
+        background: UI.surface,
+        border: `1px solid ${UI.border}`,
         borderLeft: `2px solid var(--tooltip-accent)`,
         borderRadius: 6,
         padding: '8px 12px',
@@ -82,7 +86,7 @@ export function CanvasTooltip({ visible, x, y, content, parentW, parentH }: Canv
           style={{
             fontSize: 14,
             fontWeight: 400,
-            color: CC.t2,
+            color: UI.text2,
             marginBottom: 3,
             whiteSpace: 'nowrap',
             lineHeight: '20px',
@@ -96,7 +100,7 @@ export function CanvasTooltip({ visible, x, y, content, parentW, parentH }: Canv
           style={{
             fontSize: 16,
             fontWeight: 500,
-            color: CC.t1,
+            color: UI.text1,
             whiteSpace: 'nowrap',
             lineHeight: '22px',
           }}

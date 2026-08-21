@@ -3,27 +3,210 @@
  * Ported from enterprise-brain/src/canvas/utils.js + theme/tokens.js
  */
 
+// --- Theme-aware token resolution ---
+
+/**
+ * Charts paint to <canvas>, so no stylesheet can reach their pixels — a host
+ * app cannot restyle chart labels, gridlines or surfaces the way it restyles
+ * DOM. So the palette resolves from CSS custom properties instead, read at
+ * *draw* time rather than at module load.
+ *
+ * Every chart in this package runs a perpetual requestAnimationFrame loop
+ * (each `draw()` ends with an unconditional `requestAnimationFrame(draw)`),
+ * so a theme flip is picked up on the very next frame. That means no repaint
+ * plumbing and no changes at any of the ~380 call sites: `CC.t1` and
+ * `AXIS_LABEL.color` stay plain property reads.
+ *
+ * Every variable falls back to the hex it previously hardcoded, so a host
+ * that defines none of them renders byte-identically to before. Opting in
+ * means defining the `--chart-*` variables per theme in the host app.
+ */
+
+/**
+ * getComputedStyle is far too slow to call per frame — one frame reads these
+ * dozens of times — so resolved values are memoised. The cache is flushed on a
+ * requestAnimationFrame tick, which bounds staleness to a single frame no
+ * matter *what* changed the custom properties.
+ *
+ * An earlier version keyed the cache on the `data-theme` attribute instead.
+ * That was too clever: it only invalidated when that specific attribute
+ * changed, so any host that swapped the variables by another route — a
+ * different attribute, a class, a stylesheet swap, or re-applying variables
+ * under an unchanged attribute — kept serving values from the previous theme
+ * indefinitely. Flushing per frame costs one small object allocation and is
+ * correct regardless of how the host drives theming.
+ */
+let tokenCache: Record<string, string> = {};
+let flushQueued = false;
+
+function queueCacheFlush(): void {
+  if (flushQueued || typeof requestAnimationFrame === 'undefined') return;
+  flushQueued = true;
+  requestAnimationFrame(() => {
+    tokenCache = {};
+    flushQueued = false;
+  });
+}
+
+/**
+ * Canvas silently ignores an assignment of an unparseable colour to
+ * fillStyle/strokeStyle, leaving whatever was set previously — which surfaces
+ * as text painted in a stale, arbitrary colour rather than as a clean failure.
+ * A host typo in a custom property would therefore be near-impossible to trace,
+ * so anything that does not look like a colour is rejected in favour of the
+ * fallback.
+ */
+/**
+ * Theme-change notification.
+ *
+ * Most charts here run a perpetual rAF loop, so they re-read the palette every
+ * frame and need nothing else. Trend is the exception: it deliberately stops its
+ * loop once the entrance animation finishes and paints its labels only on that
+ * final frame, so whatever colour was resolved at that instant is permanent.
+ * On a theme flip its canvas keeps the previous theme's ink.
+ *
+ * Charts that stop drawing must therefore be told to redraw. The observer
+ * watches data-theme, class and style on <html>, which between them cover every
+ * common way a host swaps a theme — including inline custom properties written
+ * straight onto the root element.
+ */
+let themeVersion = 0;
+const themeListeners = new Set<() => void>();
+
+if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+  new MutationObserver(() => {
+    tokenCache = {};
+    themeVersion++;
+    themeListeners.forEach((listener) => listener());
+  }).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'class', 'style'],
+  });
+}
+
+/** Subscribe to theme changes. Pair with getThemeVersion via useSyncExternalStore. */
+export function subscribeThemeChange(listener: () => void): () => void {
+  themeListeners.add(listener);
+  return () => themeListeners.delete(listener);
+}
+
+/** Monotonic counter — changes whenever the resolved palette may have changed. */
+export function getThemeVersion(): number {
+  return themeVersion;
+}
+
+function looksLikeColor(v: string): boolean {
+  return /^#[0-9a-fA-F]{3,8}$/.test(v) || /^(rgb|hsl)a?\(/.test(v) || /^[a-zA-Z]+$/.test(v);
+}
+
+function token(cssVar: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback; // SSR / unit tests
+  const hit = tokenCache[cssVar];
+  if (hit !== undefined) return hit;
+  const resolved = getComputedStyle(document.documentElement)
+    .getPropertyValue(cssVar)
+    .trim();
+  queueCacheFlush();
+  const value = resolved && looksLikeColor(resolved) ? resolved : fallback;
+  return (tokenCache[cssVar] = value);
+}
+
 // --- Color tokens ---
 
 export const CC = {
-  bg:       '#0C0E12',
-  bgL:      '#0C1420',
-  sf:       '#13161B',
-  bd:       '#22262F',
-  blue:     '#4C93D9',
-  cyan:     '#36BFFA',
-  orange:   '#EC772A',
-  red:      '#EC772A',
-  green:    '#5DA537',
-  purple:   '#818FF8',
-  amber:    '#EEBF3B',
-  teal:     '#69DFE9',
-  tealDark: '#00818F',
-  barBg:    '#7DB9DF',
-  t1:       '#F7F9FA',
-  t2:       '#B3B5B6',
-  t3:       '#94979C',
-  t4:       '#334155',
+  /** plot ground / slice separator */
+  get bg()       { return token('--chart-bg',          '#0C0E12'); },
+  get bgL()      { return token('--chart-bg-alt',      '#0C1420'); },
+  /** raised surface — tooltip and panel backing */
+  get sf()       { return token('--chart-surface',     '#13161B'); },
+  /** gridlines, axes, hairline separators */
+  get bd()       { return token('--chart-border',      '#22262F'); },
+  get blue()     { return token('--chart-blue',        '#4C93D9'); },
+  get cyan()     { return token('--chart-cyan',        '#36BFFA'); },
+  get orange()   { return token('--chart-orange',      '#EC772A'); },
+  get red()      { return token('--chart-red',         '#EC772A'); },
+  get green()    { return token('--chart-green',       '#5DA537'); },
+  get purple()   { return token('--chart-purple',      '#818FF8'); },
+  get amber()    { return token('--chart-amber',       '#EEBF3B'); },
+  get teal()     { return token('--chart-teal',        '#69DFE9'); },
+  get tealDark() { return token('--chart-teal-dark',   '#00818F'); },
+  get barBg()    { return token('--chart-bar-bg',      '#7DB9DF'); },
+  /** text ladder — t1 strongest, t4 is a dark slate for use on bright fills */
+  get t1()       { return token('--chart-text-1',      '#F7F9FA'); },
+  get t2()       { return token('--chart-text-2',      '#B3B5B6'); },
+  get t3()       { return token('--chart-text-3',      '#94979C'); },
+  get t4()       { return token('--chart-text-4',      '#334155'); },
+};
+
+/**
+ * DOM-component surface tokens.
+ *
+ * Unlike CC (which feeds canvas paint), these back the package's React
+ * components — KPI tiles, takeaways, empty states. They previously sat as
+ * hardcoded literals inside inline `style` objects, leaving a consuming app no
+ * way to reach them except by matching the emitted style string with
+ * `[style*="…"]` attribute selectors — brittle, and silently broken by any
+ * change to a literal.
+ *
+ * These deliberately resolve differently from CC. CC returns a *resolved*
+ * colour because canvas needs a concrete value at paint time, and its charts
+ * repaint every frame so they pick up a theme flip for free. DOM components
+ * do not re-render on a theme flip, so a resolved value would go stale on the
+ * element. Emitting a `var()` reference instead hands resolution to the
+ * browser, which reapplies it the moment the custom property changes — no
+ * re-render, no subscription, no cache.
+ *
+ * Each carries the exact literal it replaced as its fallback, so a host that
+ * defines none of these renders byte-identically to before.
+ */
+export const UI = {
+  /** KPI tile — translucent glass lift over the page field */
+  tileBg:      'var(--kpi-tile-bg, rgba(255,255,255,0.05))',
+  tileBorder:  'var(--kpi-tile-border, rgba(255,255,255,0.20))',
+  /** source drop geometry 3.42/3.42/3.42 — hosts retint, keeping the offsets */
+  tileShadow:  'var(--kpi-tile-shadow, 3.42px 3.42px 3.42px 0px rgba(0,0,0,0.30))',
+  /** big metric number */
+  value:       'var(--kpi-value, #F7F7F7)',
+  valueStrong: 'var(--kpi-value-strong, #FFFFFF)',
+  /** tile label under the metric, and its smaller sub-label */
+  label:       'var(--kpi-label, rgba(255,255,255,0.70))',
+  labelFaint:  'var(--kpi-label-faint, rgba(255,255,255,0.45))',
+  /** takeaway body copy */
+  takeaway:    'var(--kpi-takeaway, #C2C2C2)',
+  /** unfilled progress / gauge track */
+  track:       'var(--chart-track, rgba(255,255,255,0.07))',
+  /** 1px vertical split between paired stats */
+  divider:     'var(--chart-divider, rgba(255,255,255,0.12))',
+  /** 2px horizontal rule under a stat row */
+  rule:        'var(--chart-rule, rgba(255,255,255,0.08))',
+  /** no-data state */
+  emptyBg:     'var(--chart-empty-bg, rgba(255,255,255,0.03))',
+  emptyText:   'var(--chart-empty-text, rgba(255,255,255,0.35))',
+  /**
+   * The canvas text ladder and series colours, as var() references for DOM use.
+   *
+   * DOM components must never read the CC getters: those resolve to a concrete
+   * string, and a component that captures one in a module-scope constant does
+   * so at import time — before the host has applied its theme — freezing the
+   * dark fallback permanently in every theme. A var() reference has no such
+   * failure mode, because the browser re-resolves it on every repaint.
+   */
+  text1:       'var(--chart-text-1, #F7F9FA)',
+  text2:       'var(--chart-text-2, #B3B5B6)',
+  text3:       'var(--chart-text-3, #94979C)',
+  text4:       'var(--chart-text-4, #334155)',
+  red:         'var(--chart-red, #EC772A)',
+  amber:       'var(--chart-amber, #EEBF3B)',
+  green:       'var(--chart-green, #5DA537)',
+  blue:        'var(--chart-blue, #4C93D9)',
+  purple:      'var(--chart-purple, #818FF8)',
+  surface:     'var(--chart-surface, #13161B)',
+  border:      'var(--chart-border, #22262F)',
+  /** alias kept for readability at label call sites */
+  labelStrong: 'var(--chart-text-2, #B3B5B6)',
+  accent:      'var(--chart-teal, #69DFE9)',
+  /** axis-label role, for the DOM axis titles that sit outside the canvas */
+  axisLabel:   'var(--chart-axis-label, #F7F7F7)',
 } as const;
 
 /** Gradient color pairs — [from, to] — from the design-system palette */
@@ -97,15 +280,15 @@ export const CHART_PALETTE = [
  */
 export const AXIS_LABEL = {
   font:          "400 16px 'Satoshi Variable', 'DM Sans', sans-serif",
-  color:         '#F7F7F7',
+  get color()    { return token('--chart-axis-label', '#F7F7F7'); },
   letterSpacing: '0px',
-} as const;
+};
 
 
 export const CHART_VALUE = {
   font:          "500 16px 'Satoshi Variable', 'DM Sans', sans-serif",
-  color:         '#F7F7F7',
-} as const;
+  get color()    { return token('--chart-value', '#F7F7F7'); },
+};
 
 /**
  * Legend label style — applied to all chart legend items (swatches, keys, footers).
@@ -118,9 +301,9 @@ export const CHART_VALUE = {
  */
 export const LEGEND_LABEL = {
   font:          "400 18px 'Satoshi Variable', 'DM Sans', sans-serif",
-  color:         '#B3B5B6',
+  get color()    { return token('--chart-legend-label', '#B3B5B6'); },
   letterSpacing: '0px',
-} as const;
+};
 
 // --- Color helpers ---
 

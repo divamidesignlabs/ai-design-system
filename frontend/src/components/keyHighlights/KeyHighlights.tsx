@@ -1,25 +1,28 @@
 import type React from 'react';
-import { CC } from '../../canvas/canvasUtils';
+import { UI } from '../../canvas/canvasUtils';
 import type { KeyHighlightBlock, KeyHighlightChip, KeyHighlightBadge, KeyHighlightDot, ScorecardRow, FlagsListRow, ComparisonRow } from '../../types';
 
 // ─── Shared palette & fonts ──────────────────────────────────────────────────
+// var() references, never the CC getters. This object is module-scope, so a
+// resolved getter would be captured at import time — before the host applies
+// its theme — and would freeze the dark fallback into every theme.
 const C = {
   bg:     'transparent',
   border: 'transparent',
-  t1:     CC.t1,
-  t2:     CC.t2,
-  t3:     CC.t3,
-  t4:     CC.t4,
-  red:    CC.red,
-  amber:  CC.amber,
-  green:  CC.green,
+  t1:     UI.text1,
+  t2:     UI.text2,
+  t3:     UI.text3,
+  t4:     UI.text4,
+  red:    UI.red,
+  amber:  UI.amber,
+  green:  UI.green,
 } as const;
 
 const SANS = "'Satoshi Variable', 'DM Sans', sans-serif";
 
 // Typography spec — Display xs / Medium — applied to value text
 const VALUE: React.CSSProperties = {
-  color:      '#F7F7F7',
+  color:      UI.value,
   fontFamily: SANS,
   fontSize:   24,
   fontWeight: 500,
@@ -28,7 +31,7 @@ const VALUE: React.CSSProperties = {
 
 // Typography spec — Text sm / Regular — applied to label/description text
 const LABEL: React.CSSProperties = {
-  color:      '#B3B5B6',
+  color:      UI.labelStrong,
   fontFamily: SANS,
   fontSize:   18,
   fontWeight: 400,
@@ -80,22 +83,22 @@ function Stats({ items = [] }: { items: Array<{ value: string; label: string; su
             justifyContent: 'space-between', alignItems: 'center',
             width: 286, minHeight: 129, padding: '20px 16px',
             flexShrink: 0,
-            border: '1px solid rgba(255,255,255,0.20)',
-            background: 'rgba(255,255,255,0.05)',
-            boxShadow: '3.42px 3.42px 3.42px 0px rgba(0,0,0,0.30)',
+            border: `1px solid ${UI.tileBorder}`,
+            background: UI.tileBg,
+            boxShadow: UI.tileShadow,
             boxSizing: 'border-box' as const,
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 24, flex: 1, minWidth: 0 }}>
-            <div style={{ ...VALUE, color: '#FFFFFF' }}>
+            <div style={{ ...VALUE, color: UI.valueStrong }}>
               {item.value}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-              <div style={{ ...LABEL, color: 'rgba(255,255,255,0.70)' }}>
+              <div style={{ ...LABEL, color: UI.label }}>
                 {item.label}
               </div>
               {item.sublabel && (
-                <div style={{ ...LABEL, fontSize: 14, color: 'rgba(255,255,255,0.45)' }}>
+                <div style={{ ...LABEL, fontSize: 14, color: UI.labelFaint }}>
                   {item.sublabel}
                 </div>
               )}
@@ -167,17 +170,17 @@ function Chips({ items = [] }: { items: KeyHighlightChip[] }) {
             justifyContent: 'space-between', alignItems: 'center',
             width: 286, minHeight: 129, padding: '20px 16px',
             flexShrink: 0,
-            border: '1px solid rgba(255,255,255,0.20)',
-            background: 'rgba(255,255,255,0.05)',
-            boxShadow: '3.42px 3.42px 3.42px 0px rgba(0,0,0,0.30)',
+            border: `1px solid ${UI.tileBorder}`,
+            background: UI.tileBg,
+            boxShadow: UI.tileShadow,
             boxSizing: 'border-box' as const,
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 24, flex: 1, minWidth: 0 }}>
-            <div style={{ ...VALUE, color: '#FFFFFF' }}>
+            <div style={{ ...VALUE, color: UI.valueStrong }}>
               {item.value}
             </div>
-            <div style={{ ...LABEL, color: 'rgba(255,255,255,0.70)' }}>
+            <div style={{ ...LABEL, color: UI.label }}>
               {item.label}
             </div>
           </div>
@@ -220,11 +223,11 @@ function Badges({ items = [] }: { items: KeyHighlightBadge[] }) {
           >
             <span
               style={{
-                width: 7, height: 7, borderRadius: '50%', background: CC.t2,
+                width: 7, height: 7, borderRadius: '50%', background: UI.text2,
                 flexShrink: 0, marginTop: 5,
               }}
             />
-            <span style={{ ...LABEL , color: '#B3B5B6'}}>
+            <span style={{ ...LABEL , color: UI.labelStrong}}>
               {item.text}
             </span>
           </div>
@@ -253,7 +256,7 @@ function DotStrip({ min, max, unit, dots = [], chips = [] }: {
         <div
           style={{
             position: 'absolute' as const, top: 38, left: 8, right: 8,
-            height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 1,
+            height: 2, background: UI.rule, borderRadius: 1,
           }}
         />
         {/* Min / max labels */}
@@ -266,7 +269,7 @@ function DotStrip({ min, max, unit, dots = [], chips = [] }: {
         {/* Dots */}
         {visibleDots.map((dot, i) => {
           const pct = ((dot.val - min) / range) * 100;
-          const dotColor = dot.color ?? CC.blue;
+          const dotColor = dot.color ?? UI.blue;
           const above = i % 2 === 0; // alternate label side to reduce crowding
           return (
             <div
@@ -324,8 +327,8 @@ function Proportion({ leftPct, leftLabel, leftValue, leftColor, rightPct, rightL
   chips?: KeyHighlightChip[];
 }) {
   if (!leftLabel && !rightLabel) return null;
-  const lColor = leftColor ?? CC.blue;
-  const rColor = rightColor ?? CC.blue;
+  const lColor = leftColor ?? UI.blue;
+  const rColor = rightColor ?? UI.blue;
   return (
     <div>
       {/* Split bar */}
@@ -341,7 +344,7 @@ function Proportion({ leftPct, leftLabel, leftValue, leftColor, rightPct, rightL
             {leftValue}
           </span>
         </div>
-        <div style={{ width: 1, background: 'rgba(255,255,255,0.12)', flexShrink: 0 }} />
+        <div style={{ width: 1, background: UI.divider, flexShrink: 0 }} />
         <div
           style={{
             width: `${rightPct}%`, background: rColor + '2A',
@@ -380,7 +383,7 @@ function Ring({ pct, label, color: colorProp, chips }: {
   chips?: KeyHighlightChip[];
 }) {
   if (pct == null && !label) return null;
-  const color = colorProp ?? CC.blue;
+  const color = colorProp ?? UI.blue;
   const r      = 30;
   const cx     = 40;
   const cy     = 40;
@@ -392,7 +395,7 @@ function Ring({ pct, label, color: colorProp, chips }: {
       {/* Ring */}
       <div style={{ position: 'relative' as const, flexShrink: 0, width: 80, height: 80 }}>
         <svg width={80} height={80} style={{ transform: 'rotate(-90deg)' }}>
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={8} />
+          <circle cx={cx} cy={cy} r={r} fill="none" style={{ stroke: UI.track }} strokeWidth={8} />
           <circle
             cx={cx} cy={cy} r={r} fill="none"
             stroke={color} strokeWidth={8}
@@ -478,12 +481,12 @@ function ScorecardRows({ items = [] }: { items: ScorecardRow[] }) {
           </span>
 
           {/* Mini bar */}
-          <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 0, overflow: 'hidden' }}>
+          <div style={{ flex: 1, height: 4, background: UI.track, borderRadius: 0, overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
                 width: `${item.pct}%`,
-                background: item.color ?? CC.purple,
+                background: item.color ?? UI.purple,
                 borderRadius: 0,
                 opacity: 0.75,
               }}

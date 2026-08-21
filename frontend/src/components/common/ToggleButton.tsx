@@ -1,3 +1,5 @@
+import { UI } from '../../canvas/canvasUtils';
+
 export interface ToggleButtonProps {
   expanded: boolean;
   onToggle: () => void;
@@ -28,7 +30,7 @@ export function ToggleButton({
         boxSizing: 'border-box',
         border: 'none',
         borderRadius: 6,
-        color: '#69DFE9',
+        color: UI.accent,
         fontSize: 14,
         fontFamily: "'Satoshi Variable', 'DM Sans', sans-serif",
         fontStyle: 'normal',
