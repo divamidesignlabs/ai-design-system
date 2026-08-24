@@ -86,8 +86,8 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
     const padR   = Math.max(maxValW + 24, 32);
     const trackW = W - padL - padR;
     const maxVal = Math.max(
-      ...visible.map(c => c.implemented   ?? 0),
-      ...visible.map(c => c.unimplemented ?? 0),
+      ...visible.map(c => Math.abs(c.implemented   ?? 0)),
+      ...visible.map(c => Math.abs(c.unimplemented ?? 0)),
       1,
     );
     const totalH = visible.length * (PAIR_H + PAIR_GAP) - PAIR_GAP;
@@ -116,8 +116,8 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         const hpImpl  = hoverMap.current.get(implId) ?? 0;
         const hpUn    = hoverMap.current.get(unimplId) ?? 0;
         const dimFactor = !isDrillMode && selectedIdRef.current && c.id !== selectedIdRef.current ? 0.6 : 1;
-        const implW   = ((c.implemented   ?? 0) / maxVal) * trackW * localP;
-        const unimplW = ((c.unimplemented ?? 0) / maxVal) * trackW * localP;
+        const implW   = (Math.abs(c.implemented   ?? 0) / maxVal) * trackW * localP;
+        const unimplW = (Math.abs(c.unimplemented ?? 0) / maxVal) * trackW * localP;
 
         // Contractor name — centered between the two bars
         ctx.font      = AXIS_LABEL.font;
