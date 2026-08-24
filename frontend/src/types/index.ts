@@ -155,9 +155,9 @@ export type BaseVisualizationConfig =
   | { type: typeof CHART_TYPE.SEGMENTED_SPLIT_BAR; items: VariationRow[]; labelA?: string; labelB?: string; unit?: string; itemsByEntity?: Record<string, VariationRow[]> }
   | { type: typeof CHART_TYPE.BALANCE_SCALE; left: QuotationSide; right: QuotationSide; leftTitle?: string; rightTitle?: string; unit?: string; dataByEntity?: Record<string, QuotationSummary> }
   | { type: typeof CHART_TYPE.AREA_LINE; points: QuotationTrendPoint[] }
-  | { type: typeof CHART_TYPE.TREND_VIEW; points: QuotationTrendPoint[]; pointsByEntity?: Record<string, QuotationTrendPoint[]>; xLabel?: string; yLabel?: string; valuePrefix?: string; animationEnabled?: boolean }
+  | { type: typeof CHART_TYPE.TREND_VIEW; points: QuotationTrendPoint[]; pointsByEntity?: Record<string, QuotationTrendPoint[]>; xLabel?: string | null; yLabel?: string | null; valuePrefix?: string | null; animationEnabled?: boolean }
   | { type: typeof CHART_TYPE.WEEKLY_FLOW; items: ContractorRow[] }
-  | { type: typeof CHART_TYPE.HORIZONTAL_BAR; rows: HorizontalBarRow[]; valuePrefix?: string };
+  | { type: typeof CHART_TYPE.HORIZONTAL_BAR; rows: HorizontalBarRow[]; valuePrefix?: string | null };
 
 export type SubentityItem = Record<string, unknown>;
 

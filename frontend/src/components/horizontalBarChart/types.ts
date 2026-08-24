@@ -10,7 +10,7 @@ export type HorizontalBarRow = {
 
 export type HorizontalBarChartProps = {
   rows: HorizontalBarRow[];
-  valuePrefix?: string;
+  valuePrefix?: string | null;
   onItemClick?: (id: string, label: string, subentity?: SubentityPayload) => void;
   testID?: string;
 };

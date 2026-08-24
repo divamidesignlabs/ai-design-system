@@ -39,9 +39,11 @@ function fmtM(v: number, prefix: string): string {
 
 export function MultiSegmentHorizontalBarChart({
   rows: rawRows = [],
-  valuePrefix = '$',
+  valuePrefix: rawValuePrefix,
   testID,
 }: MultiSegmentHorizontalBarChartProps) {
+  // null-safe: backend specs send JSON null, which skips a default parameter.
+  const valuePrefix = rawValuePrefix ?? '$';
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef  = useRef(0);
   const [expanded, setExpanded] = useState(false);

@@ -34,7 +34,9 @@ function fmtValue(v: number, prefix: string): string {
   return `${sign}${prefix}${abs.toFixed(0)}`;
 }
 
-export function HorizontalBarChart({ rows, valuePrefix = '$', onItemClick, testID }: HorizontalBarChartProps) {
+export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemClick, testID }: HorizontalBarChartProps) {
+  // null-safe: backend specs send JSON null, which skips a default parameter.
+  const valuePrefix = rawValuePrefix ?? '$';
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap  = useRef<Map<string, number>>(new Map());

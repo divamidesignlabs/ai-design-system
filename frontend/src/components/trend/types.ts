@@ -5,9 +5,9 @@ export interface TrendProps {
   selectedId?: string;
   seriesByEntity?: Record<string, QuotationTrendPoint[]>;
   colorOffset?: number;
-  xLabel?: string;
-  yLabel?: string;
-  valuePrefix?: string;
+  xLabel?: string | null;
+  yLabel?: string | null;
+  valuePrefix?: string | null;
   testID?: string;
   /** Progressive line-draw entry animation. Defaults to true (existing behavior). */
   animationEnabled?: boolean;

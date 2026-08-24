@@ -2,6 +2,6 @@ import type { DualSegmentBarRow } from '../../types';
 
 export interface MultiSegmentHorizontalBarChartProps {
   rows: DualSegmentBarRow[];
-  valuePrefix?: string;
+  valuePrefix?: string | null;
   testID?: string;
 }
