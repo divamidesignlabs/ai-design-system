@@ -458,6 +458,27 @@ export const CHART_VALUE = {
   get color()    { return token('--chart-value', '#F7F7F7'); },
 };
 
+
+/**
+ * Hover ink — the colour a row's own name and value take while hovered, plus
+ * the accent its tooltip picks up with them.
+ *
+ * Each series is a gradient PAIR, and hover takes the end of that pair which
+ * reads as "more" against the ground it sits on:
+ *
+ *     dark ground  -> pair[1], the bright stop
+ *     light ground -> pair[0], the dark stop   (#316e74 for teal)
+ *
+ * Straight out of the palette, no mixing — the hovered label is exactly the
+ * colour the bar's own dark end is, which is what ties the two together.
+ *
+ * ProgressRaceChart previously took pair[1] on both grounds, so on light it
+ * painted the label the pale tip (#7bb9bd) instead of the dark stop.
+ */
+export function hoverInkFor(pair: readonly [string, string]): string {
+  return isLightChartGround() ? pair[0] : pair[1];
+}
+
 /**
  * Legend label style — applied to all chart legend items (swatches, keys, footers).
  * Change once here to update every chart legend.

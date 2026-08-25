@@ -4,7 +4,7 @@ import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitCircle, registerHitRect } from '../../canvas/useCanvasInteraction';
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutCubic } from '../../canvas/easing';
-import { isLightChartGround, CC, GRAD_PALETTE, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, drawDust, drawScanline, setupCanvas } from '../../canvas/canvasUtils';
+import { isLightChartGround, CC, GRAD_PALETTE, AXIS_LABEL, CHART_VALUE, hoverInkFor, rgb, drawGlow, drawDust, drawScanline, setupCanvas } from '../../canvas/canvasUtils';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
@@ -86,6 +86,9 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
     const trackW = W - padL - padR;
 
     const [gradFrom, gradTo] = GRAD_PALETTE[colorOffset % GRAD_PALETTE.length];
+    // Name, value, tip glow and tooltip accent share one ink. gradTo is the
+    // pair's BRIGHT stop — correct on dark, washed out on light. See hoverInkFor.
+    const hoverInk = hoverInkFor(GRAD_PALETTE[colorOffset % GRAD_PALETTE.length]);
     let raf: number;
 
     const draw = () => {
@@ -148,13 +151,13 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
 
         // Subtle glow at bar tip on hover
         if (hp > 0) {
-          drawGlow(ctx, runnerX, trackY + TRACK_H / 2, 12 * hp, gradTo, 0.35 * hp);
+          drawGlow(ctx, runnerX, trackY + TRACK_H / 2, 12 * hp, hoverInk, 0.35 * hp);
         }
 
         const hitData = {
           label: contractor.name,
           sublabel: contractor.totalLabel ?? (contractor.total != null ? formatNumber(contractor.total) : undefined),
-          color: gradTo,
+          color: hoverInk,
         };
         registerHitRect(
           hitZonesRef.current,
@@ -178,14 +181,14 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
 
         // Value label — right edge
         ctx.font         = CHART_VALUE.font;
-        ctx.fillStyle    = hp > 0 ? rgb(gradTo, 1 * dimFactor) : rgb(CC.t1, 0.85 * dimFactor);
+        ctx.fillStyle    = hp > 0 ? rgb(hoverInk, 1 * dimFactor) : rgb(CC.t1, 0.85 * dimFactor);
         ctx.textAlign    = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(formatNumber(contractor.total ?? 0), padL + trackW + 12, trackY + TRACK_H / 2);
 
         // Left label: contractor name
         ctx.font      = AXIS_LABEL.font;
-        ctx.fillStyle = hp > 0 ? rgb(gradTo, 1 * dimFactor) : rgb(CC.t2, 0.85 * dimFactor);
+        ctx.fillStyle = hp > 0 ? rgb(hoverInk, 1 * dimFactor) : rgb(CC.t2, 0.85 * dimFactor);
         ctx.textAlign = 'right';
         ctx.fillText(truncate(ctx, contractor.name ?? contractor.abbreviation ?? '', padL - 16), padL - 8, trackY + TRACK_H / 2);
       });

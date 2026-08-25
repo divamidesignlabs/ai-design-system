@@ -4,7 +4,7 @@ import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutQuart, stagger, tickHoverProgress } from '../../canvas/easing';
-import { isLightChartGround, GRAD, CC, AXIS_LABEL, CHART_VALUE, rgb, drawGlow } from '../../canvas/canvasUtils';
+import { isLightChartGround, GRAD, CC, AXIS_LABEL, CHART_VALUE, hoverInkFor, rgb, drawGlow } from '../../canvas/canvasUtils';
 import { useCanvasLoop } from '../../canvas/useCanvasLoop';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
@@ -60,25 +60,9 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
 
   const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width: W, height: H, onClick: onItemClick ? handleClick : undefined });
 
-  // Hover ink for the row NAME, the value LABEL and the tooltip's accent line.
-  //
-  // All three used to take CC.cyan, the series' MARK register. On the dark
-  // ground that doubles as a perfectly good ink -- a bright cyan on #0C0E12 is
-  // high contrast either way -- so one token served both jobs. On a light
-  // ground it does not, and hovering a row made its own name and value HARDER
-  // to read than the rows around it: the opposite of what a hover should do.
-  //
-  // The light value is the THICK stop of the bar's own gradient. GRAD.teal is
-  // a pair -- ['#316e74', '#7bb9bd'] -- and the two ends are worlds apart as
-  // ink:
-  //
-  //     #316e74  5.18:1 worst-case across the plot surfaces
-  //     #7bb9bd  1.96:1
-  //
-  // Taking the dark end keeps the label tied to the bar it belongs to, which
-  // is the whole point of colouring it, while clearing AA. Taking the pale end
-  // is what made the labels wash out. Dark keeps CC.cyan, unchanged.
-  const hoverInk = isLightChartGround() ? GRAD.teal[0] : CC.cyan;
+  // Row NAME, value LABEL, glow and tooltip accent all take one ink.
+  // See hoverInkFor in canvasUtils for why light ground goes darker, not brighter.
+  const hoverInk = hoverInkFor(GRAD.teal);
 
   useCanvasLoop(
     canvasRef,
@@ -121,7 +105,7 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
 
         // Bar fill — horizontal gradient: dim left → bright right
         if (barW > 0) {
-          if (hp > 0) drawGlow(ctx, x0 + barW, barY + BAR_H / 2, barW * 0.25, CC.cyan, 0.14 * hp);
+          if (hp > 0) drawGlow(ctx, x0 + barW, barY + BAR_H / 2, barW * 0.25, hoverInk, 0.14 * hp);
           const grad = ctx.createLinearGradient(x0, barY, x0 + barW, barY);
           if (isLightChartGround()) {
             // The alpha ramp below is a dark-ground construct: over white it
@@ -150,7 +134,7 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
 
         // Hover border
         if (hp > 0 && barW > 0) {
-          ctx.strokeStyle = rgb(CC.cyan, 0.6 * hp);
+          ctx.strokeStyle = rgb(hoverInk, 0.6 * hp);
           ctx.lineWidth   = 1;
           ctx.beginPath();
           ctx.roundRect(x0, barY, barW, BAR_H, BAR_H / 2);
