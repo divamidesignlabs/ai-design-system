@@ -4,7 +4,7 @@ import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutQuart, stagger, tickHoverProgress } from '../../canvas/easing';
-import { CC, AXIS_LABEL, CHART_VALUE, LEGEND_LABEL, rgb, drawGlow } from '../../canvas/canvasUtils';
+import { isLightChartGround, CC, AXIS_LABEL, CHART_VALUE, LEGEND_LABEL, rgb, drawGlow } from '../../canvas/canvasUtils';
 import { useCanvasLoop } from '../../canvas/useCanvasLoop';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
@@ -120,7 +120,12 @@ export function StackedHorizontalBarChart({ data, dataByEntity, onItemClick, sel
         const unfilledX  = x0 + totalW;
         const unfilledW  = animTrackW - totalW;
         if (unfilledW > 2) {
-          ctx.fillStyle = rgb(CC.barBg, 0.2);
+          // Track background. --chart-bar-bg is a SERIES colour (blue in the light
+          // theme) while the fill is whichever series this row owns, so at 0.2 the
+          // track read as a saturated periwinkle competing with a teal bar. Light
+          // uses --chart-track, the token that actually means "unfilled track";
+          // dark keeps the original so its output is unchanged.
+          ctx.fillStyle = isLightChartGround() ? CC.trackFill : rgb(CC.barBg, 0.2);
           ctx.beginPath();
           ctx.rect(unfilledX, y, unfilledW, BAR_H);
           ctx.fill();

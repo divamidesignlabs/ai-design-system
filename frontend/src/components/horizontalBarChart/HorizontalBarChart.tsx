@@ -4,7 +4,7 @@ import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInteraction';
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutQuart, stagger, tickHoverProgress } from '../../canvas/easing';
-import { CC, AXIS_LABEL, CHART_VALUE, rgb, drawGlow } from '../../canvas/canvasUtils';
+import { isLightChartGround, GRAD, CC, AXIS_LABEL, CHART_VALUE, rgb, drawGlow } from '../../canvas/canvasUtils';
 import { useCanvasLoop } from '../../canvas/useCanvasLoop';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
@@ -60,6 +60,26 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
 
   const { hoveredRef, tooltip, hitZonesRef } = useCanvasInteraction(canvasRef, { width: W, height: H, onClick: onItemClick ? handleClick : undefined });
 
+  // Hover ink for the row NAME, the value LABEL and the tooltip's accent line.
+  //
+  // All three used to take CC.cyan, the series' MARK register. On the dark
+  // ground that doubles as a perfectly good ink -- a bright cyan on #0C0E12 is
+  // high contrast either way -- so one token served both jobs. On a light
+  // ground it does not, and hovering a row made its own name and value HARDER
+  // to read than the rows around it: the opposite of what a hover should do.
+  //
+  // The light value is the THICK stop of the bar's own gradient. GRAD.teal is
+  // a pair -- ['#316e74', '#7bb9bd'] -- and the two ends are worlds apart as
+  // ink:
+  //
+  //     #316e74  5.18:1 worst-case across the plot surfaces
+  //     #7bb9bd  1.96:1
+  //
+  // Taking the dark end keeps the label tied to the bar it belongs to, which
+  // is the whole point of colouring it, while clearing AA. Taking the pale end
+  // is what made the labels wash out. Dark keeps CC.cyan, unchanged.
+  const hoverInk = isLightChartGround() ? GRAD.teal[0] : CC.cyan;
+
   useCanvasLoop(
     canvasRef,
     W,
@@ -82,7 +102,7 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
 
         // Row name — right-aligned before bar start
         ctx.font         = AXIS_LABEL.font;
-        ctx.fillStyle    = hp > 0 ? CC.cyan : AXIS_LABEL.color;
+        ctx.fillStyle    = hp > 0 ? hoverInk : AXIS_LABEL.color;
         ctx.textAlign    = 'right';
         ctx.textBaseline = 'middle';
         ctx.fillText(truncate(ctx, row.name, NAME_W - 16), x0 - 8, midY);
@@ -90,7 +110,7 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
         registerHitRect(hitZonesRef.current, row.id, 0, rowTop, x0, ROW_H, {
           label: row.name,
           value: label,
-          color: CC.cyan,
+          color: hoverInk,
         });
 
         // Track — full-width dim cyan fill matching reference
@@ -103,9 +123,25 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
         if (barW > 0) {
           if (hp > 0) drawGlow(ctx, x0 + barW, barY + BAR_H / 2, barW * 0.25, CC.cyan, 0.14 * hp);
           const grad = ctx.createLinearGradient(x0, barY, x0 + barW, barY);
-          grad.addColorStop(0,    rgb(CC.cyan, 0.2  + hp * 0.05));
-          grad.addColorStop(0.55, rgb(CC.cyan, 0.55 + hp * 0.15));
-          grad.addColorStop(1,    rgb(CC.cyan, 0.72 + hp * 0.18));
+          if (isLightChartGround()) {
+            // The alpha ramp below is a dark-ground construct: over white it
+            // compresses toward the background, measuring 1.25 -> 2.47 (a spread
+            // of 1.22, against dark's 3.75) with even its strongest end under
+            // the 3:1 a data mark needs. Light uses the two audited teal stops
+            // instead, so the ramp stays visible and the bar's strong end
+            // clears the floor. Same stop positions, same direction.
+            // from = the audited dark stop, to = the light tip. Read straight
+            // through so the ramp is the colour pair rather than an alpha
+            // sweep, which is what collapsed on a light ground.
+            const [from, to] = GRAD.teal;
+            grad.addColorStop(0,    rgb(from, 0.95 + hp * 0.05));
+            grad.addColorStop(0.55, rgb(from, 0.55 + hp * 0.10));
+            grad.addColorStop(1,    rgb(to,   0.85 + hp * 0.15));
+          } else {
+            grad.addColorStop(0,    rgb(CC.cyan, 0.2  + hp * 0.05));
+            grad.addColorStop(0.55, rgb(CC.cyan, 0.55 + hp * 0.15));
+            grad.addColorStop(1,    rgb(CC.cyan, 0.72 + hp * 0.18));
+          }
           ctx.fillStyle = grad;
           ctx.beginPath();
           ctx.roundRect(x0, barY, barW, BAR_H, BAR_H / 2);
@@ -126,7 +162,7 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
           const fade = Math.min(1, (localP - 0.35) / 0.4);
           ctx.globalAlpha  = fade;
           ctx.font         = CHART_VALUE.font;
-          ctx.fillStyle    = hp > 0 ? CC.cyan : CHART_VALUE.color;
+          ctx.fillStyle    = hp > 0 ? hoverInk : CHART_VALUE.color;
           ctx.textAlign    = 'right';
           ctx.textBaseline = 'middle';
           ctx.fillText(label, W - 8, midY);
@@ -137,7 +173,7 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
         registerHitRect(hitZonesRef.current, row.id, x0, rowTop, Math.max(barW, 1), ROW_H, {
           label: row.name,
           value: label,
-          color: CC.cyan,
+          color: hoverInk,
         });
       });
     },

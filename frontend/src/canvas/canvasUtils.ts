@@ -76,6 +76,7 @@ const themeListeners = new Set<() => void>();
 if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
   new MutationObserver(() => {
     tokenCache = {};
+    refreshPalettes();
     themeVersion++;
     themeListeners.forEach((listener) => listener());
   }).observe(document.documentElement, {
@@ -131,6 +132,8 @@ export const CC = {
   get teal()     { return token('--chart-teal',        '#69DFE9'); },
   get tealDark() { return token('--chart-teal-dark',   '#00818F'); },
   get barBg()    { return token('--chart-bar-bg',      '#7DB9DF'); },
+  /** Unfilled progress/gauge track, resolved (not a var() string) for canvas. */
+  get trackFill(){ return token('--chart-track',        'rgba(255,255,255,0.07)'); },
   /** text ladder — t1 strongest, t4 is a dark slate for use on bright fills */
   get t1()       { return token('--chart-text-1',      '#F7F9FA'); },
   get t2()       { return token('--chart-text-2',      '#B3B5B6'); },
@@ -209,23 +212,35 @@ export const UI = {
   axisLabel:   'var(--chart-axis-label, #F7F7F7)',
 } as const;
 
-/** Gradient color pairs — [from, to] — from the design-system palette */
-export const GRAD = {
-  teal:    ['#00818F', '#69DFE9'],
-  violet:  ['#5B3CB1', '#C8B6F3'],
-  mint:    ['#27837A', '#81E8CE'],
-  magenta: ['#8732A7', '#E7A1F0'],
-  sky:     ['#0068BE', '#8EC2F6'],
-  blue:    ['#084CF0', '#8BA9FF'],
-  purple:  ['#5C42B8', '#9DA5FD'],
-  royal:   ['#2556C8', '#A9B1F8'],
-  success: ['#58B21C', '#97F558'],
-  warning: ['#FFD974', '#E4AA0D'],
-  error:   ['#EC8C42', '#E46A0D'],
-} as const;
-
-/** Solid endpoint colors — from the design-system palette */
-export const SOLID = {
+/**
+ * Series palettes, per theme.
+ *
+ * The eleven-hue order — teal, violet, mint, magenta, sky, blue, purple,
+ * royal, success, warning, error — is the source series order and is an
+ * invariant: a series keeps its slot across every chart and both themes, so a
+ * reader who learns "slot 2 is mint" is never contradicted.
+ *
+ * What is NOT invariant is the value. These hues were chosen against a
+ * near-black plot ground, and six of the eleven collapse on a white one:
+ *
+ *     teal    #69DFE9  1.53:1      success #58B21C  2.62:1
+ *     violet  #C8B6F3  1.79:1      warning #E4AA0D  2.03:1
+ *     mint    #81E8CE  1.42:1
+ *     magenta #E7A1F0  1.90:1
+ *
+ * against the 3:1 an essential mark needs. So each hue has an audited light
+ * stop as well. Five come from the ARKA light package's dataViz palette
+ * verbatim (blue, teal, purple, warning, error — note `error` stays ORANGE,
+ * which is deliberate in that design system: red is reserved for destructive
+ * actions). The other six are derived mechanically — hue and saturation held,
+ * lightness reduced until the value clears 3.4:1 on pure white — rather than
+ * re-picked by eye, so each stays recognisably the same hue.
+ *
+ * Every light value clears 3:1 on all three grounds a mark can land on: the
+ * plot ground (#FAFCFF), pure white, and a KPI tile (#F6FAFF). Worst case is
+ * 3.25:1.
+ */
+const SOLID_DARK = {
   teal:    '#69DFE9',
   violet:  '#C8B6F3',
   mint:    '#81E8CE',
@@ -239,31 +254,184 @@ export const SOLID = {
   error:   '#E46A0D',
 } as const;
 
-export const PALETTE = [CC.blue, CC.amber, CC.purple, CC.green, CC.red];
+const SOLID_LIGHT = {
+  teal:    '#316e74', // package
+  violet:  '#9977E9', // derived
+  mint:    '#1D9D7D', // derived
+  magenta: '#D354E4', // derived
+  sky:     '#0068BE', // already clears on white
+  blue:    '#2D70F7', // package
+  purple:  '#654EC0', // package
+  royal:   '#2556C8', // already clears on white
+  success: '#4E9D19', // derived
+  warning: '#8A6A00', // package
+  error:   '#B65B1A', // package — orange, not red
+} as const;
 
-/** Gradient pairs for per-item bar gradients — [dark start, bright end] */
-export const GRAD_PALETTE = [
-  GRAD.teal,    // #00818F → #69DFE9
-  GRAD.violet,  // #5B3CB1 → #C8B6F3
-  GRAD.mint,    // #27837A → #81E8CE
-  GRAD.magenta, // #8732A7 → #E7A1F0
-  GRAD.sky,     // #0068BE → #8EC2F6
-  GRAD.blue,    // #084CF0 → #8BA9FF
-  GRAD.royal,   // #2556C8 → #A9B1F8
-  GRAD.purple,  // #5C42B8 → #9DA5FD
-] as const;
+const GRAD_DARK = {
+  teal:    ['#00818F', '#69DFE9'],
+  violet:  ['#5B3CB1', '#C8B6F3'],
+  mint:    ['#27837A', '#81E8CE'],
+  magenta: ['#8732A7', '#E7A1F0'],
+  sky:     ['#0068BE', '#8EC2F6'],
+  blue:    ['#084CF0', '#8BA9FF'],
+  purple:  ['#5C42B8', '#9DA5FD'],
+  royal:   ['#2556C8', '#A9B1F8'],
+  success: ['#58B21C', '#97F558'],
+  warning: ['#FFD974', '#E4AA0D'],
+  error:   ['#EC8C42', '#E46A0D'],
+} as const;
 
-/** Per-chart offset palette — 8-step sequence cycling through the design-system palette */
-export const CHART_PALETTE = [
-  SOLID.teal,    // #69DFE9
-  SOLID.violet,  // #C8B6F3
-  SOLID.mint,    // #81E8CE
-  SOLID.magenta, // #E7A1F0
-  SOLID.sky,     // #0068BE
-  SOLID.blue,    // #084CF0
-  SOLID.royal,   // #2556C8
-  SOLID.purple,  // #5C42B8
-] as const;
+/**
+ * Light gradients keep the source ramp's DIRECTION and widen its spread.
+ *
+ * Every bar runs its gradient left to right with luminance INCREASING: dark
+ * theme goes deep -> bright, so light theme goes dark stop -> light tint. Same
+ * direction, and the bar's tip fades out in both.
+ *
+ * The mistake worth recording is what happened between: the first version of
+ * this block used pairs that were correct in direction but far too narrow
+ * (teal ran #356E75 -> #458C92, both dark). Charts apply these with alpha on
+ * top — ProgressRace at 0.75 -> 0.95 — so over a light ground the two ends
+ * landed within about one contrast step and the bar read as a flat block. I
+ * then "fixed" it by inverting the direction, which made the ramp visible but
+ * ran it light -> dark, i.e. backwards. Reasoning about contrast rather than
+ * luminance is what caused that: on a light ground the STRONG end is the dark
+ * one, but strong is not where this design puts the start.
+ *
+ * So: direction as the source has it, spread wide enough to read. The dark
+ * start carries the mark (every one clears 3.4:1) and the light tip is the
+ * fade, exactly as the bright tip is on the dark theme.
+ */
+const GRAD_LIGHT = {
+  teal:    ['#316e74', '#7bb9bd'],
+  violet:  ['#9977E9', '#C6B2F3'],
+  mint:    ['#1D9D7D', '#27D4A9'],
+  magenta: ['#D354E4', '#E8A5F1'],
+  sky:     ['#0068BE', '#7AC3FF'],
+  blue:    ['#2D70F7', '#9EBDFB'],
+  purple:  ['#654EC0', '#C0B6E5'],
+  royal:   ['#2556C8', '#A6BCEF'],
+  success: ['#4E9D19', '#69D422'],
+  warning: ['#8A6A00', '#EBB400'],
+  error:   ['#B65B1A', '#EDAF83'],
+} as const;
+
+/**
+ * Which palette applies is derived from the resolved plot ground rather than
+ * from a theme name or a new custom property, so a host that already defines
+ * `--chart-bg` gets the right series with no extra wiring — and a host that
+ * defines nothing keeps the dark values, because the fallback ground is dark.
+ *
+ * Relative luminance above 0.5 means the marks are sitting on a light surface.
+ */
+export function isLightChartGround(): boolean {
+  const ground = token('--chart-bg', '#0C0E12');
+  const m = /^#([0-9a-fA-F]{6})$/.exec(ground);
+  if (!m) return false;
+  const int = parseInt(m[1], 16);
+  const chan = [(int >> 16) & 255, (int >> 8) & 255, int & 255].map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2] > 0.5;
+}
+
+type SeriesKey = keyof typeof SOLID_DARK;
+
+const series = (k: SeriesKey): string => (isLightChartGround() ? SOLID_LIGHT[k] : SOLID_DARK[k]);
+const gradient = (k: SeriesKey): readonly [string, string] =>
+  (isLightChartGround() ? GRAD_LIGHT[k] : GRAD_DARK[k]) as readonly [string, string];
+
+/**
+ * Solid endpoint colors, resolved per theme at read time. Written as explicit
+ * getters rather than generated, to match the `CC` block above and so a reader
+ * can see every series without following a construction.
+ */
+export const SOLID = {
+  get teal()    { return series('teal'); },
+  get violet()    { return series('violet'); },
+  get mint()    { return series('mint'); },
+  get magenta()    { return series('magenta'); },
+  get sky()    { return series('sky'); },
+  get blue()    { return series('blue'); },
+  get purple()    { return series('purple'); },
+  get royal()    { return series('royal'); },
+  get success()    { return series('success'); },
+  get warning()    { return series('warning'); },
+  get error()    { return series('error'); },
+} as const;
+
+/** Gradient color pairs — [from, to] — resolved per theme at read time. */
+export const GRAD = {
+  get teal()    { return gradient('teal'); },
+  get violet()    { return gradient('violet'); },
+  get mint()    { return gradient('mint'); },
+  get magenta()    { return gradient('magenta'); },
+  get sky()    { return gradient('sky'); },
+  get blue()    { return gradient('blue'); },
+  get purple()    { return gradient('purple'); },
+  get royal()    { return gradient('royal'); },
+  get success()    { return gradient('success'); },
+  get warning()    { return gradient('warning'); },
+  get error()    { return gradient('error'); },
+} as const;
+
+/**
+ * The exported palettes have to stay ARRAYS — they are part of the published
+ * API and are consumed as `PALETTE[i % PALETTE.length]` at ~30 call sites —
+ * but their contents must follow the theme rather than being captured once at
+ * module load. (That capture was a real bug before this change: `PALETTE` was
+ * built from the theme-aware `CC` getters yet froze whatever the theme happened
+ * to be at import time, so it never followed a theme flip.)
+ *
+ * `export let` plus recomputation is the whole mechanism. ESM exports are live
+ * bindings, so a consumer's `import { PALETTE }` sees each new array with no
+ * call site changing and no exotic indirection.
+ *
+ * An earlier attempt wrapped these in a Proxy that rebuilt the backing array
+ * per property access. It looked tidier and was wrong: the `get` trap returned
+ * array methods unbound, so `Symbol.iterator` ran against the empty target and
+ * `[...PALETTE]` silently produced `[]` instead of throwing. A spread that
+ * quietly yields nothing is precisely the kind of failure that is impossible to
+ * trace from a blank chart, so the clever version is gone.
+ *
+ * Recomputed from the MutationObserver above, which watches data-theme, class
+ * and style on <html> — between them every route a host realistically uses to
+ * swap a theme, including inline custom properties written onto the root.
+ *
+ * Deliberately NOT recomputed from the per-frame token-cache flush, even though
+ * that would be marginally more thorough. Rebuilding reads tokens, reading a
+ * token queues a flush, and a flush that rebuilds would queue the next one —
+ * a self-perpetuating requestAnimationFrame loop that never idles. I wrote that
+ * version first and it hung a Node harness outright, which is a kinder way to
+ * find it than a host discovering a permanent background repaint.
+ *
+ * `refreshPalettes()` is exported so a host driving theming by some route the
+ * observer cannot see has an explicit hook.
+ */
+const buildPalette = () => [CC.blue, CC.amber, CC.purple, CC.green, CC.red] as const;
+
+const buildGradPalette = () =>
+  [GRAD.teal, GRAD.violet, GRAD.mint, GRAD.magenta, GRAD.sky, GRAD.blue, GRAD.royal, GRAD.purple] as const;
+
+const buildChartPalette = () =>
+  [SOLID.teal, SOLID.violet, SOLID.mint, SOLID.magenta, SOLID.sky, SOLID.blue, SOLID.royal, SOLID.purple] as const;
+
+export let PALETTE: readonly string[] = buildPalette();
+
+/** Gradient pairs for per-item bar gradients — [deep start, lighter end] */
+export let GRAD_PALETTE: readonly (readonly [string, string])[] = buildGradPalette();
+
+/** Per-chart offset palette — 8-step sequence cycling through the series order */
+export let CHART_PALETTE: readonly string[] = buildChartPalette();
+
+/** Rebuild the exported arrays from the currently resolved theme. */
+export function refreshPalettes(): void {
+  PALETTE = buildPalette();
+  GRAD_PALETTE = buildGradPalette();
+  CHART_PALETTE = buildChartPalette();
+}
 
 
 // --- Typography tokens ---
@@ -375,7 +543,25 @@ export function drawGlow(
   ctx.fill();
 }
 
-/** Draw ambient floating dust particles */
+
+let reducedMotionQuery: MediaQueryList | null = null;
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  reducedMotionQuery ??= window.matchMedia('(prefers-reduced-motion: reduce)');
+  return reducedMotionQuery.matches;
+}
+
+/**
+ * Whether the perpetual background effects should paint at all.
+ * `isLightChartGround` reads through the per-frame token cache, so this is
+ * cheap enough to call once per draw.
+ */
+export function ambientMotionEnabled(): boolean {
+  return !isLightChartGround() && !prefersReducedMotion();
+}
+
+/** Draw ambient floating dust particles. No-op on a light ground — see above. */
 export function drawDust(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -384,6 +570,7 @@ export function drawDust(
   count = 50,
   color = rgb(CC.blue, 0.05),
 ): void {
+  if (!ambientMotionEnabled()) return;
   for (let i = 0; i < count; i++) {
     ctx.beginPath();
     ctx.arc(
@@ -398,7 +585,10 @@ export function drawDust(
   }
 }
 
-/** Draw subtle horizontal scanlines for cinematic feel */
+/**
+ * Draw subtle horizontal scanlines for cinematic feel.
+ * No-op on a light ground and under reduced motion — see drawDust above.
+ */
 export function drawScanline(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -406,6 +596,7 @@ export function drawScanline(
   T: number,
   alpha = 0.015,
 ): void {
+  if (!ambientMotionEnabled()) return;
   ctx.fillStyle = `rgba(0,0,0,${alpha})`;
   const offset = (T * 0.5) % 6;
   for (let y = offset; y < h; y += 3) {

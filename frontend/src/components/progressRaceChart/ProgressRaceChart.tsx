@@ -4,7 +4,7 @@ import { CanvasTooltip } from '../../canvas/CanvasTooltip';
 import { useCanvasInteraction, registerHitCircle, registerHitRect } from '../../canvas/useCanvasInteraction';
 import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { easeOutCubic } from '../../canvas/easing';
-import { CC, GRAD_PALETTE, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, drawDust, drawScanline, setupCanvas } from '../../canvas/canvasUtils';
+import { isLightChartGround, CC, GRAD_PALETTE, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, drawDust, drawScanline, setupCanvas } from '../../canvas/canvasUtils';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
@@ -120,7 +120,12 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
         const trackY    = PAD_T + i * (TRACK_H + TRACK_GAP);
 
         // Track background
-        ctx.fillStyle = rgb(CC.barBg, 0.2);
+        // Track background. --chart-bar-bg is a SERIES colour (blue in the light
+        // theme) while the fill is whichever series this row owns, so at 0.2 the
+        // track read as a saturated periwinkle competing with a teal bar. Light
+        // uses --chart-track, the token that actually means "unfilled track";
+        // dark keeps the original so its output is unchanged.
+        ctx.fillStyle = isLightChartGround() ? CC.trackFill : rgb(CC.barBg, 0.2);
         ctx.beginPath();
         ctx.rect(padL, trackY, trackW, TRACK_H);
         ctx.fill();
