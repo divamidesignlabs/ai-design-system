@@ -7,6 +7,7 @@ import { stagger, tickHoverProgress, easeOutCubic } from '../../canvas/easing';
 import { CC, CHART_PALETTE, AXIS_LABEL, CHART_VALUE, rgb, drawGlow, setupCanvas } from '../../canvas/canvasUtils';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
+import { NUMBER_SYSTEM } from '../../constants';
 import { formatNumber } from '../../utils/numberFormat';
 import type { NCEContractorRow } from '../../types';
 import type { RadialFanTreeChartProps } from './types';
@@ -16,7 +17,8 @@ const MIN_H = 320;
 const PAD_V = 60;
 const MIN_LEAF_SPACING = 28;
 
-export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContractor = [], dataByEntity, onItemClick, selectedId, colorOffset = 0, testID }: RadialFanTreeChartProps) {
+export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContractor = [], dataByEntity, onItemClick, selectedId, colorOffset = 0, numberSystem: rawNumberSystem, testID }: RadialFanTreeChartProps) {
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
@@ -148,7 +150,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
           ctx.fillStyle = rgb(color, leafFade * dimFactor);
           ctx.fill();
 
-          const displayVal = formatNumber(c.count ?? 0);
+          const displayVal = c.label ?? formatNumber(c.count ?? 0, 1, numberSystem);
           registerHitCircle(hitZonesRef.current, c.id, lpos.x, lpos.y, leafR + 8, {
             label: c.name,
             value: displayVal,
@@ -161,7 +163,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
           ctx.font = AXIS_LABEL.font;
           ctx.textAlign = 'left';
           const nameText = c.abbreviation ?? c.name?.slice(0, 6) ?? '';
-          const countText = ` ${formatNumber(c.count ?? 0)}`;
+          const countText = ` ${c.label ?? formatNumber(c.count ?? 0, 1, numberSystem)}`;
           const yLabel = lpos.y + 4;
           ctx.fillStyle = hp > 0 ? color : rgb(CC.t2, 0.85);
           ctx.fillText(nameText, labelX, yLabel);
@@ -195,7 +197,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
       if (progress > 0.4) {
         const fade = Math.min(1, (progress - 0.4) / 0.4);
         ctx.globalAlpha = fade;
-        const fullValue = formatNumber(activeTotal);
+        const fullValue = activeTotalLabel ?? formatNumber(activeTotal, 1, numberSystem);
         const maxTextW = rootR * 1.7;
         ctx.font = `500 16px 'Satoshi Variable', 'DM Sans', sans-serif`;
         let truncated = fullValue;
@@ -213,7 +215,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
 
       registerHitCircle(hitZonesRef.current, '__root__', rootX, rootY, rootR, {
         label: activeTotalLabel ?? 'Total',
-        value: formatNumber(activeTotal),
+        value: activeTotalLabel ?? formatNumber(activeTotal, 1, numberSystem),
         sublabel: `${byContractor.length} items`,
         color,
       });
@@ -223,7 +225,7 @@ export function RadialFanTreeChart({ total = 0, totalLabel, items: rawByContract
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [activeTotal, activeTotalLabel, byContractor, fanH, W, isDrillMode]);
+  }, [activeTotal, activeTotalLabel, byContractor, fanH, W, isDrillMode, numberSystem]);
 
   const isEmpty = byContractor.length === 0;
   if (isEmpty) {

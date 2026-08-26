@@ -46,7 +46,7 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
   if (config.type === CHART_TYPE.MULTI_METRIC_CONSTELLATION) return <MultiMetricConstellationChart items={config.items} />;
   if (config.type === CHART_TYPE.PROGRESS_RACE) {
     const items = listenerItems ? listenerItems as ContractorRow[] : config.items;
-    return <ProgressRaceChart items={items} itemsByEntity={config.itemsByEntity} colorOffset={colorOffset} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+    return <ProgressRaceChart items={items} itemsByEntity={config.itemsByEntity} colorOffset={colorOffset} numberSystem={config.numberSystem} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
   }
   if (config.type === CHART_TYPE.HUB_AND_SPOKE_RADIAL) return <HubAndSpokeRadialChart segments={config.segments} title={config.title} unitLabel={config.unitLabel} />;
   if (config.type === CHART_TYPE.DOT_MATRIX) return <DotMatrixChart items={config.items} />;
@@ -63,7 +63,7 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
     const items = fanData ? fanData.items as NCEContractorRow[] : (listenerItems ? listenerItems as NCEContractorRow[] : config.items);
     const total = fanData ? fanData.total : listenerItems ? (listenerItems as NCEContractorRow[]).reduce((s, it) => s + (it.count ?? 0), 0) : config.total;
     const totalLabel = fanData ? fanData.totalLabel : config.totalLabel;
-    return <RadialFanTreeChart total={total} totalLabel={totalLabel} items={items} dataByEntity={config.dataByEntity} colorOffset={colorOffset} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+    return <RadialFanTreeChart total={total} totalLabel={totalLabel} items={items} dataByEntity={config.dataByEntity} colorOffset={colorOffset} numberSystem={config.numberSystem} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
   }
   if (config.type === CHART_TYPE.SEMI_CIRCULAR_GAUGE) {
     const firstItem = Array.isArray(listenerItems) ? (listenerItems[0] as Record<string, unknown>) : undefined;
@@ -94,15 +94,15 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
     const listenerPoints = listenerItems && !Array.isArray(listenerItems)
       ? (listenerItems as { points?: QuotationTrendPoint[] }).points ?? []
       : undefined;
-    return <Trend points={listenerPoints ?? config.points} colorOffset={colorOffset} xLabel={config.xLabel} yLabel={config.yLabel} valuePrefix={config.valuePrefix} animationEnabled={config.animationEnabled} />;
+    return <Trend points={listenerPoints ?? config.points} colorOffset={colorOffset} xLabel={config.xLabel} yLabel={config.yLabel} valuePrefix={config.valuePrefix} numberSystem={config.numberSystem} animationEnabled={config.animationEnabled} />;
   }
   if (config.type === CHART_TYPE.WEEKLY_FLOW) {
     const items = listenerItems ? listenerItems as ContractorRow[] : config.items;
-    return <WeeklyFlow items={items} onItemClick={onItemClick} />;
+    return <WeeklyFlow items={items} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
   if (config.type === CHART_TYPE.HORIZONTAL_BAR) {
     const rows = listenerItems ? listenerItems as HorizontalBarRow[] : config.rows;
-    return <HorizontalBarChart rows={rows} valuePrefix={config.valuePrefix} onItemClick={onItemClick} />;
+    return <HorizontalBarChart rows={rows} valuePrefix={config.valuePrefix} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
 
   return <div className="viz-empty">Visualization unavailable</div>;

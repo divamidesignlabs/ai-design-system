@@ -8,6 +8,7 @@ import { isLightChartGround, CC, GRAD_PALETTE, AXIS_LABEL, CHART_VALUE, hoverInk
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
+import { NUMBER_SYSTEM } from '../../constants';
 import { formatNumber } from '../../utils/numberFormat';
 import type { ContractorRow } from '../../types';
 import type { ProgressRaceChartProps } from './types';
@@ -28,7 +29,8 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 }
 
 
-export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemClick, selectedId, colorOffset = 0, testID }: ProgressRaceChartProps) {
+export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemClick, selectedId, colorOffset = 0, numberSystem: rawNumberSystem, testID }: ProgressRaceChartProps) {
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef  = useRef(0);
@@ -80,7 +82,7 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
     ctx.letterSpacing = AXIS_LABEL.letterSpacing;
     const maxLabelW = visible.reduce((acc, c) => Math.max(acc, ctx.measureText(c.name ?? c.abbreviation ?? '').width), 0);
     ctx.font = CHART_VALUE.font;
-    const maxValW = visible.reduce((acc, c) => Math.max(acc, ctx.measureText(formatNumber(c.total ?? 0)).width), 0);
+    const maxValW = visible.reduce((acc, c) => Math.max(acc, ctx.measureText(c.totalLabel ?? formatNumber(c.total ?? 0, 1, numberSystem)).width), 0);
     const padL   = Math.max(Math.min(maxLabelW + 20, W * 0.3), 40);
     const padR   = Math.max(maxValW + 20, 28);
     const trackW = W - padL - padR;
@@ -184,7 +186,7 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
         ctx.fillStyle    = hp > 0 ? rgb(hoverInk, 1 * dimFactor) : rgb(CC.t1, 0.85 * dimFactor);
         ctx.textAlign    = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(formatNumber(contractor.total ?? 0), padL + trackW + 12, trackY + TRACK_H / 2);
+        ctx.fillText(contractor.totalLabel ?? formatNumber(contractor.total ?? 0, 1, numberSystem), padL + trackW + 12, trackY + TRACK_H / 2);
 
         // Left label: contractor name
         ctx.font      = AXIS_LABEL.font;
@@ -200,7 +202,7 @@ drawScanline(ctx, W, H, T, 0.015);
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [visible, H, colorOffset, W]);
+  }, [visible, H, colorOffset, W, numberSystem]);
 
   const isEmpty = sorted.length === 0;
   if (isEmpty) {

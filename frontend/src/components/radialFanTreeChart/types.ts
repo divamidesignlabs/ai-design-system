@@ -1,3 +1,4 @@
+import type { NumberSystem } from '../../constants';
 import type { NCEContractorRow, SubentityPayload } from '../../types';
 
 export interface RadialFanEntityData {
@@ -15,5 +16,6 @@ export interface RadialFanTreeChartProps {
   selectedId?: string;
   width?: number;
   colorOffset?: number;
+  numberSystem?: NumberSystem | null;
   testID?: string;
 }

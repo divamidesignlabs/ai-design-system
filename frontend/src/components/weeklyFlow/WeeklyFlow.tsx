@@ -17,6 +17,7 @@ import {
   setupCanvas,
 } from "../../canvas/canvasUtils";
 import { useContainerWidth } from "../../canvas/useContainerWidth";
+import { NUMBER_SYSTEM } from "../../constants";
 import { formatNumber } from "../../utils/numberFormat";
 import type { WeeklyFlowProps } from "./types";
 
@@ -26,8 +27,10 @@ const H = 360;
 export function WeeklyFlow({
   items: items = [],
   onItemClick,
+  numberSystem: rawNumberSystem,
   testID,
 }: WeeklyFlowProps) {
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
@@ -234,8 +237,8 @@ export function WeeklyFlow({
           sublabel: (() => {
             const b = c.base ?? 0;
             const v = c.variation ?? 0;
-            const bStr = c.baseLabel ?? formatNumber(b);
-            const vStr = c.variationLabel ?? formatNumber(v);
+            const bStr = c.baseLabel ?? formatNumber(b, 1, numberSystem);
+            const vStr = c.variationLabel ?? formatNumber(v, 1, numberSystem);
             if (b !== 0 && v !== 0) return `${bStr} + ${vStr}`;
             if (b !== 0) return bStr;
             if (v !== 0) return vStr;
@@ -309,7 +312,7 @@ export function WeeklyFlow({
         ctx.fillText("Base Value", col2X, baseNode.cy - 6);
         ctx.font = CHART_VALUE.font;
         ctx.fillStyle = CHART_VALUE.color;
-        ctx.fillText(formatNumber(totalBase), col2X, baseNode.cy + 8);
+        ctx.fillText(formatNumber(totalBase, 1, numberSystem), col2X, baseNode.cy + 8);
         ctx.globalAlpha = 1;
         ctx.textBaseline = "alphabetic";
 
@@ -329,7 +332,7 @@ export function WeeklyFlow({
         ctx.fillText("Variations", col2X, varNode.cy - 4);
         ctx.font = CHART_VALUE.font;
         ctx.fillStyle = CHART_VALUE.color;
-        ctx.fillText(formatNumber(totalVar), col2X, varNode.cy + 8);
+        ctx.fillText(formatNumber(totalVar, 1, numberSystem), col2X, varNode.cy + 8);
         ctx.globalAlpha = 1;
         ctx.textBaseline = "alphabetic";
       }
@@ -354,7 +357,7 @@ export function WeeklyFlow({
         ctx.fillText("Total Commitment", col3X, totalNode.cy - 12);
         ctx.font = CHART_VALUE.font;
         ctx.fillStyle = CC.blue;
-        ctx.fillText(formatNumber(grandTotal), col3X, totalNode.cy + 6);
+        ctx.fillText(formatNumber(grandTotal, 1, numberSystem), col3X, totalNode.cy + 6);
         ctx.globalAlpha = 1;
         ctx.textBaseline = "alphabetic";
       }
@@ -364,7 +367,7 @@ export function WeeklyFlow({
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [items, W]);
+  }, [items, W, numberSystem]);
 
   return (
     <div
