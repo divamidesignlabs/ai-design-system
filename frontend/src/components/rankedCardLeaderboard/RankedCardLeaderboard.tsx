@@ -19,6 +19,7 @@ import {
 } from "../../canvas/canvasUtils";
 import { useContainerWidth } from "../../canvas/useContainerWidth";
 import { ChartEmptyState } from "../common/ChartEmptyState";
+import { NUMBER_SYSTEM } from "../../constants";
 import { formatNumber } from "../../utils/numberFormat";
 import type { EWOpenContractorRow } from "../../types";
 import type { RankedCardLeaderboardProps } from "./types";
@@ -32,8 +33,10 @@ const MAX_COLS = 5;
 export function RankedCardLeaderboard({
   items: rawItems = [],
   onItemClick,
+  numberSystem: rawNumberSystem,
   testID,
 }: RankedCardLeaderboardProps) {
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -186,7 +189,7 @@ export function RankedCardLeaderboard({
         ctx.fillText(circleText, photoX, photoY);
 
         // Show count when present, fall back to label only when count is absent
-        const formattedCount = contractor.count != null ? formatNumber(contractor.count) : null;
+        const formattedCount = contractor.count != null ? formatNumber(contractor.count, 1, numberSystem) : null;
         const fullVal = contractor.label ?? formattedCount;
         if (fullVal) {
           ctx.font = CHART_VALUE.font;
@@ -227,7 +230,7 @@ export function RankedCardLeaderboard({
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [sorted, total, W]);
+  }, [sorted, total, W, numberSystem]);
 
   const isEmpty = sorted.length === 0;
   if (isEmpty)

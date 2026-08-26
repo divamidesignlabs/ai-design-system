@@ -31,7 +31,7 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 
 function fmtValue(v: number, prefix: string, numberSystem: NumberSystem): string {
   const sign = v < 0 ? '-' : '';
-  return `${sign}${prefix}${formatNumber(v, 1, numberSystem).replace('-', '')}`;
+  return `${sign}${prefix}${formatNumber(Math.abs(v), 1, numberSystem)}`;
 }
 
 export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, numberSystem: rawNumberSystem, onItemClick, testID }: HorizontalBarChartProps) {

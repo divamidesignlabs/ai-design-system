@@ -149,12 +149,12 @@ export type BaseVisualizationConfig =
   | { type: typeof CHART_TYPE.PROGRESS_RACE; items: ContractorRow[]; itemsByEntity?: Record<string, ContractorRow[]>; numberSystem?: NumberSystem | null }
   | { type: typeof CHART_TYPE.HUB_AND_SPOKE_RADIAL; segments: EWStatusRow[]; title?: string; unitLabel?: string }
   | { type: typeof CHART_TYPE.DOT_MATRIX; items: EWCategoryRow[]; title?: string }
-  | { type: typeof CHART_TYPE.RANKED_CARD_LEADERBOARD; items: EWOpenContractorRow[]; title?: string }
-  | { type: typeof CHART_TYPE.PROPORTIONAL_BAND; severities: EWSeverityRow[]; title?: string }
+  | { type: typeof CHART_TYPE.RANKED_CARD_LEADERBOARD; items: EWOpenContractorRow[]; title?: string; numberSystem?: NumberSystem | null }
+  | { type: typeof CHART_TYPE.PROPORTIONAL_BAND; severities: EWSeverityRow[]; title?: string; numberSystem?: NumberSystem | null }
   | { type: typeof CHART_TYPE.RADIAL_FAN_TREE; total: number; totalLabel?: string; items: NCEContractorRow[]; dataByEntity?: Record<string, { total: number; totalLabel?: string; items: NCEContractorRow[] }>; numberSystem?: NumberSystem | null }
-  | { type: typeof CHART_TYPE.SEMI_CIRCULAR_GAUGE; confirmed: number; total: number; label?: string; gaugeByEntity?: Record<string, { confirmed: number; total: number }>; subentity?: SubentityItem[] }
-  | { type: typeof CHART_TYPE.SEGMENTED_SPLIT_BAR; items: VariationRow[]; labelA?: string; labelB?: string; unit?: string; itemsByEntity?: Record<string, VariationRow[]> }
-  | { type: typeof CHART_TYPE.BALANCE_SCALE; left: QuotationSide; right: QuotationSide; leftTitle?: string; rightTitle?: string; unit?: string; dataByEntity?: Record<string, QuotationSummary> }
+  | { type: typeof CHART_TYPE.SEMI_CIRCULAR_GAUGE; confirmed: number; total: number; label?: string; gaugeByEntity?: Record<string, { confirmed: number; total: number }>; subentity?: SubentityItem[]; numberSystem?: NumberSystem | null }
+  | { type: typeof CHART_TYPE.SEGMENTED_SPLIT_BAR; items: VariationRow[]; labelA?: string; labelB?: string; unit?: string; itemsByEntity?: Record<string, VariationRow[]>; numberSystem?: NumberSystem | null }
+  | { type: typeof CHART_TYPE.BALANCE_SCALE; left: QuotationSide; right: QuotationSide; leftTitle?: string; rightTitle?: string; unit?: string; dataByEntity?: Record<string, QuotationSummary>; numberSystem?: NumberSystem | null }
   | { type: typeof CHART_TYPE.AREA_LINE; points: QuotationTrendPoint[] }
   | { type: typeof CHART_TYPE.TREND_VIEW; points: QuotationTrendPoint[]; pointsByEntity?: Record<string, QuotationTrendPoint[]>; xLabel?: string | null; yLabel?: string | null; valuePrefix?: string | null; numberSystem?: NumberSystem | null; animationEnabled?: boolean }
   | { type: typeof CHART_TYPE.WEEKLY_FLOW; items: ContractorRow[]; numberSystem?: NumberSystem | null }

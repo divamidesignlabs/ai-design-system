@@ -6,6 +6,7 @@ import type { TooltipContent } from '../../canvas/useCanvasInteraction';
 import { tickHoverProgress, easeOutQuart } from '../../canvas/easing';
 import { CC, CHART_PALETTE, AXIS_LABEL, rgb, setupCanvas } from '../../canvas/canvasUtils';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
+import { NUMBER_SYSTEM } from '../../constants';
 import { formatNumber } from '../../utils/numberFormat';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import type { EWSeverityRow } from '../../types';
@@ -23,7 +24,8 @@ function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxW: numb
   return `${t}…`;
 }
 
-export function ProportionalBandChart({ severities: rawSeverities = [], colorOffset = 0, onItemClick, testID }: ProportionalBandChartProps) {
+export function ProportionalBandChart({ severities: rawSeverities = [], colorOffset = 0, onItemClick, numberSystem: rawNumberSystem, testID }: ProportionalBandChartProps) {
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
@@ -128,7 +130,7 @@ export function ProportionalBandChart({ severities: rawSeverities = [], colorOff
 
         registerHitRect(hitZonesRef.current, sev.severity, runX, padT, fullW, bandH, {
           label: sev.severity,
-          value: formatNumber(sev.count ?? 0),
+          value: formatNumber(sev.count ?? 0, 1, numberSystem),
           sublabel: `${Math.round(((sev.count ?? 0) / (total || 1)) * 100)}%`,
           color,
         });
@@ -147,7 +149,7 @@ export function ProportionalBandChart({ severities: rawSeverities = [], colorOff
           // Value inside band — larger bold font
           ctx.font      = `600 22px 'Satoshi Variable', 'DM Sans', sans-serif`;
           ctx.fillStyle = rgb(CC.t1, 0.92 + hp * 0.08);
-          ctx.fillText(formatNumber(sev.count ?? 0), cx, padT + bandH / 2 + 8);
+          ctx.fillText(formatNumber(sev.count ?? 0, 1, numberSystem), cx, padT + bandH / 2 + 8);
 
           // Pct below band
           ctx.font      = AXIS_LABEL.font;
@@ -164,7 +166,7 @@ export function ProportionalBandChart({ severities: rawSeverities = [], colorOff
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [severities, W, colorOffset]);
+  }, [severities, W, colorOffset, numberSystem]);
 
   const isEmpty = severities.length === 0;
   if (isEmpty) return (

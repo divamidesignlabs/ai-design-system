@@ -158,7 +158,7 @@ export function ProgressRaceChart({ items: rawItems = [], itemsByEntity, onItemC
 
         const hitData = {
           label: contractor.name,
-          sublabel: contractor.totalLabel ?? (contractor.total != null ? formatNumber(contractor.total) : undefined),
+          sublabel: contractor.totalLabel ?? (contractor.total != null ? formatNumber(contractor.total, 1, numberSystem) : undefined),
           color: hoverInk,
         };
         registerHitRect(

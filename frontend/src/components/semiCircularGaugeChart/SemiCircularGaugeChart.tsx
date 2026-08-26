@@ -5,6 +5,7 @@ import { useCanvasInteraction, registerHitRect } from '../../canvas/useCanvasInt
 import { setupCanvas, GRAD_PALETTE } from '../../canvas/canvasUtils';
 import { CC, AXIS_LABEL, LEGEND_LABEL, rgb, drawGlow } from '../../canvas/canvasUtils';
 import { easeOutBack, easeOutCubic } from '../../canvas/easing';
+import { NUMBER_SYSTEM } from '../../constants';
 import { formatNumber } from '../../utils/numberFormat';
 import type { SemiCircularGaugeChartProps } from './types';
 
@@ -30,7 +31,8 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines;
 }
 
-export function SemiCircularGaugeChart({ confirmed, total, label, colorOffset = 0, selectedId, selectedLabel, gaugeByEntity, onItemClick, subentity, testID }: SemiCircularGaugeChartProps) {
+export function SemiCircularGaugeChart({ confirmed, total, label, colorOffset = 0, selectedId, selectedLabel, gaugeByEntity, onItemClick, subentity, numberSystem: rawNumberSystem, testID }: SemiCircularGaugeChartProps) {
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
 
@@ -78,7 +80,7 @@ export function SemiCircularGaugeChart({ confirmed, total, label, colorOffset = 
       // Register the semicircle bounding box as the single click target
       registerHitRect(hitZonesRef.current, 'confirmed', cx - TRACK_R, cy - TRACK_R, TRACK_R * 2, TRACK_R, {
         label: label ?? 'Confirmed',
-        value: `${formatNumber(activeConfirmed ?? 0)} / ${formatNumber(activeTotal ?? 0)}`,
+        value: `${formatNumber(activeConfirmed ?? 0, 1, numberSystem)} / ${formatNumber(activeTotal ?? 0, 1, numberSystem)}`,
         sublabel: `${Math.round(((activeConfirmed ?? 0) / (activeTotal || 1)) * 100)}%`,
         color,
       });
@@ -191,7 +193,7 @@ export function SemiCircularGaugeChart({ confirmed, total, label, colorOffset = 
         ctx.font      = LEGEND_LABEL.font;
         ctx.fillStyle = LEGEND_LABEL.color;
         ctx.textAlign = 'center';
-        const statsText = `${formatNumber(activeConfirmed ?? 0)} of ${formatNumber(activeTotal ?? 0)} ${label}`;
+        const statsText = `${formatNumber(activeConfirmed ?? 0, 1, numberSystem)} of ${formatNumber(activeTotal ?? 0, 1, numberSystem)} ${label}`;
         wrapText(ctx, statsText, W - 40).forEach((line, i) => {
           ctx.fillText(line, cx, cy + 112 + i * LINE_H);
         });
@@ -204,7 +206,7 @@ export function SemiCircularGaugeChart({ confirmed, total, label, colorOffset = 
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [activeConfirmed, activeTotal, label, colorOffset, selectedId, selectedLabel]);
+  }, [activeConfirmed, activeTotal, label, colorOffset, selectedId, selectedLabel, numberSystem]);
 
   return (
     <div data-testid={testID} style={{ position: 'relative', width: '100%', maxWidth: W, margin: '0 auto' }}>

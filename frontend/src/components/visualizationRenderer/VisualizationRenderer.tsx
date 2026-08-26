@@ -52,11 +52,11 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
   if (config.type === CHART_TYPE.DOT_MATRIX) return <DotMatrixChart items={config.items} />;
   if (config.type === CHART_TYPE.RANKED_CARD_LEADERBOARD) {
     const items = listenerItems ? listenerItems as EWOpenContractorRow[] : config.items;
-    return <RankedCardLeaderboard items={items} onItemClick={onItemClick} />;
+    return <RankedCardLeaderboard items={items} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
   if (config.type === CHART_TYPE.PROPORTIONAL_BAND) {
     const severities = listenerItems ? listenerItems as EWSeverityRow[] : config.severities;
-    return <ProportionalBandChart severities={severities} colorOffset={colorOffset} onItemClick={onItemClick} />;
+    return <ProportionalBandChart severities={severities} colorOffset={colorOffset} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
   if (config.type === CHART_TYPE.RADIAL_FAN_TREE) {
     const fanData = listenerItems && !Array.isArray(listenerItems) ? listenerItems : null;
@@ -69,11 +69,11 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
     const firstItem = Array.isArray(listenerItems) ? (listenerItems[0] as Record<string, unknown>) : undefined;
     const confirmed = firstItem ? Number(firstItem.confirmed ?? 0) : config.confirmed;
     const total     = firstItem ? Number(firstItem.total     ?? 1) : config.total;
-    return <SemiCircularGaugeChart confirmed={confirmed} total={total} label={config.label} gaugeByEntity={config.gaugeByEntity} colorOffset={colorOffset} selectedId={effectiveSelectedId} onItemClick={onItemClick} subentity={config.subentity} />;
+    return <SemiCircularGaugeChart confirmed={confirmed} total={total} label={config.label} gaugeByEntity={config.gaugeByEntity} colorOffset={colorOffset} selectedId={effectiveSelectedId} onItemClick={onItemClick} subentity={config.subentity} numberSystem={config.numberSystem} />;
   }
   if (config.type === CHART_TYPE.SEGMENTED_SPLIT_BAR) {
     const items = listenerItems ? listenerItems as VariationRow[] : config.items;
-    return <SegmentedSplitBarChart items={items} itemsByEntity={config.itemsByEntity} labelA={config.labelA} labelB={config.labelB} unit={config.unit} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+    return <SegmentedSplitBarChart items={items} itemsByEntity={config.itemsByEntity} labelA={config.labelA} labelB={config.labelB} unit={config.unit} numberSystem={config.numberSystem} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
   }
   if (config.type === CHART_TYPE.BALANCE_SCALE) {
     let left = config.left;
@@ -83,8 +83,8 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
       if (fan.items?.length >= 2) {
         const lv = Number((fan.items[0] as Record<string, unknown>).count ?? 0);
         const rv = Number((fan.items[1] as Record<string, unknown>).count ?? 0);
-        left  = { value: lv, count: 1, label: '£' + formatNumber(lv, 2) };
-        right = { value: rv, count: 1, label: '£' + formatNumber(rv, 2) };
+        left  = { value: lv, count: 1, label: '£' + formatNumber(lv, 2, config.numberSystem ?? undefined) };
+        right = { value: rv, count: 1, label: '£' + formatNumber(rv, 2, config.numberSystem ?? undefined) };
       }
     }
     return <BalanceScaleChart left={left} right={right} leftTitle={config.leftTitle} rightTitle={config.rightTitle} unit={config.unit} dataByEntity={config.dataByEntity} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
