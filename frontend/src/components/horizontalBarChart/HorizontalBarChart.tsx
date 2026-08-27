@@ -9,6 +9,9 @@ import { useCanvasLoop } from '../../canvas/useCanvasLoop';
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
+import { NUMBER_SYSTEM } from '../../constants';
+import type { NumberSystem } from '../../constants';
+import { formatNumber } from '../../utils/numberFormat';
 import type { HorizontalBarChartProps } from './types';
 
 const DEFAULT_W = 680;
@@ -26,17 +29,15 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return t + '…';
 }
 
-function fmtValue(v: number, prefix: string): string {
-  const abs  = Math.abs(v);
+function fmtValue(v: number, prefix: string, numberSystem: NumberSystem): string {
   const sign = v < 0 ? '-' : '';
-  if (abs >= 1_000_000) return `${sign}${prefix}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000)     return `${sign}${prefix}${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}${prefix}${abs.toFixed(0)}`;
+  return `${sign}${prefix}${formatNumber(Math.abs(v), 1, numberSystem)}`;
 }
 
-export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemClick, testID }: HorizontalBarChartProps) {
+export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, numberSystem: rawNumberSystem, onItemClick, testID }: HorizontalBarChartProps) {
   // null-safe: backend specs send JSON null, which skips a default parameter.
   const valuePrefix = rawValuePrefix ?? '$';
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap  = useRef<Map<string, number>>(new Map());
@@ -80,7 +81,7 @@ export function HorizontalBarChart({ rows, valuePrefix: rawValuePrefix, onItemCl
         const x0     = PAD.left + NAME_W;
         const hp     = hoverMap.current.get(row.id) ?? 0;
         const barW   = (Math.abs(row.value) / maxValue) * barArea * localP;
-        const label  = row.valueLabel ?? fmtValue(row.value, valuePrefix);
+        const label  = row.valueLabel ?? fmtValue(row.value, valuePrefix, numberSystem);
 
         ctx.save();
 

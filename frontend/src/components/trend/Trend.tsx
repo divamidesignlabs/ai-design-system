@@ -5,6 +5,7 @@ import { useCanvasInteraction, registerHitCircle } from '../../canvas/useCanvasI
 import { easeOutCubic } from '../../canvas/easing';
 import { CC, AXIS_LABEL, CHART_PALETTE, UI, rgb, setupCanvas, subscribeThemeChange, getThemeVersion } from '../../canvas/canvasUtils';
 import { ChartEmptyState } from '../common/ChartEmptyState';
+import { NUMBER_SYSTEM } from '../../constants';
 import { formatNumber } from '../../utils/numberFormat';
 import type { QuotationTrendPoint } from '../../types';
 import type { TrendProps } from './types';
@@ -26,13 +27,14 @@ const MAX_SAMPLE = 20; // max points to measureText for minStep calculation
 // At DPR=2 a 5 000px canvas uses ~22 MB; beyond that allocation blocks the main thread.
 const MAX_CANVAS_W = 5000;
 
-export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colorOffset = 0, xLabel: rawXLabel, yLabel: rawYLabel, valuePrefix: rawValuePrefix, testID, animationEnabled = true }: TrendProps) {
+export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colorOffset = 0, xLabel: rawXLabel, yLabel: rawYLabel, valuePrefix: rawValuePrefix, numberSystem: rawNumberSystem, testID, animationEnabled = true }: TrendProps) {
   // Backend chart specs send JSON null for omitted optional strings, and a JS
   // default parameter only fires on undefined — so normalize explicitly or a
   // null leaks into the axis labels as the literal text "null".
   const xLabel = rawXLabel ?? 'Period';
   const yLabel = rawYLabel ?? 'Count';
   const valuePrefix = rawValuePrefix ?? '';
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const yAxisRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -139,7 +141,7 @@ export function Trend({ points: rawPoints = [], selectedId, seriesByEntity, colo
         yCtx.font = AXIS_LABEL.font;
         yCtx.fillStyle = AXIS_LABEL.color;
         yCtx.textAlign = 'right';
-        yCtx.fillText(`${valuePrefix}${formatNumber(value, yPrecision)}`, PAD_L - 6, y + 3);
+        yCtx.fillText(`${valuePrefix}${formatNumber(value, yPrecision, numberSystem)}`, PAD_L - 6, y + 3);
       });
 
       yCtx.save();

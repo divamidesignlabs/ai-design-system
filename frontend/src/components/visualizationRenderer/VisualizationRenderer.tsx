@@ -46,34 +46,34 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
   if (config.type === CHART_TYPE.MULTI_METRIC_CONSTELLATION) return <MultiMetricConstellationChart items={config.items} />;
   if (config.type === CHART_TYPE.PROGRESS_RACE) {
     const items = listenerItems ? listenerItems as ContractorRow[] : config.items;
-    return <ProgressRaceChart items={items} itemsByEntity={config.itemsByEntity} colorOffset={colorOffset} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+    return <ProgressRaceChart items={items} itemsByEntity={config.itemsByEntity} colorOffset={colorOffset} numberSystem={config.numberSystem} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
   }
   if (config.type === CHART_TYPE.HUB_AND_SPOKE_RADIAL) return <HubAndSpokeRadialChart segments={config.segments} title={config.title} unitLabel={config.unitLabel} />;
   if (config.type === CHART_TYPE.DOT_MATRIX) return <DotMatrixChart items={config.items} />;
   if (config.type === CHART_TYPE.RANKED_CARD_LEADERBOARD) {
     const items = listenerItems ? listenerItems as EWOpenContractorRow[] : config.items;
-    return <RankedCardLeaderboard items={items} onItemClick={onItemClick} />;
+    return <RankedCardLeaderboard items={items} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
   if (config.type === CHART_TYPE.PROPORTIONAL_BAND) {
     const severities = listenerItems ? listenerItems as EWSeverityRow[] : config.severities;
-    return <ProportionalBandChart severities={severities} colorOffset={colorOffset} onItemClick={onItemClick} />;
+    return <ProportionalBandChart severities={severities} colorOffset={colorOffset} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
   if (config.type === CHART_TYPE.RADIAL_FAN_TREE) {
     const fanData = listenerItems && !Array.isArray(listenerItems) ? listenerItems : null;
     const items = fanData ? fanData.items as NCEContractorRow[] : (listenerItems ? listenerItems as NCEContractorRow[] : config.items);
     const total = fanData ? fanData.total : listenerItems ? (listenerItems as NCEContractorRow[]).reduce((s, it) => s + (it.count ?? 0), 0) : config.total;
     const totalLabel = fanData ? fanData.totalLabel : config.totalLabel;
-    return <RadialFanTreeChart total={total} totalLabel={totalLabel} items={items} dataByEntity={config.dataByEntity} colorOffset={colorOffset} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+    return <RadialFanTreeChart total={total} totalLabel={totalLabel} items={items} dataByEntity={config.dataByEntity} colorOffset={colorOffset} numberSystem={config.numberSystem} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
   }
   if (config.type === CHART_TYPE.SEMI_CIRCULAR_GAUGE) {
     const firstItem = Array.isArray(listenerItems) ? (listenerItems[0] as Record<string, unknown>) : undefined;
     const confirmed = firstItem ? Number(firstItem.confirmed ?? 0) : config.confirmed;
     const total     = firstItem ? Number(firstItem.total     ?? 1) : config.total;
-    return <SemiCircularGaugeChart confirmed={confirmed} total={total} label={config.label} gaugeByEntity={config.gaugeByEntity} colorOffset={colorOffset} selectedId={effectiveSelectedId} onItemClick={onItemClick} subentity={config.subentity} />;
+    return <SemiCircularGaugeChart confirmed={confirmed} total={total} label={config.label} gaugeByEntity={config.gaugeByEntity} colorOffset={colorOffset} selectedId={effectiveSelectedId} onItemClick={onItemClick} subentity={config.subentity} numberSystem={config.numberSystem} />;
   }
   if (config.type === CHART_TYPE.SEGMENTED_SPLIT_BAR) {
     const items = listenerItems ? listenerItems as VariationRow[] : config.items;
-    return <SegmentedSplitBarChart items={items} itemsByEntity={config.itemsByEntity} labelA={config.labelA} labelB={config.labelB} unit={config.unit} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
+    return <SegmentedSplitBarChart items={items} itemsByEntity={config.itemsByEntity} labelA={config.labelA} labelB={config.labelB} unit={config.unit} numberSystem={config.numberSystem} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
   }
   if (config.type === CHART_TYPE.BALANCE_SCALE) {
     let left = config.left;
@@ -83,8 +83,8 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
       if (fan.items?.length >= 2) {
         const lv = Number((fan.items[0] as Record<string, unknown>).count ?? 0);
         const rv = Number((fan.items[1] as Record<string, unknown>).count ?? 0);
-        left  = { value: lv, count: 1, label: '£' + formatNumber(lv, 2) };
-        right = { value: rv, count: 1, label: '£' + formatNumber(rv, 2) };
+        left  = { value: lv, count: 1, label: '£' + formatNumber(lv, 2, config.numberSystem ?? undefined) };
+        right = { value: rv, count: 1, label: '£' + formatNumber(rv, 2, config.numberSystem ?? undefined) };
       }
     }
     return <BalanceScaleChart left={left} right={right} leftTitle={config.leftTitle} rightTitle={config.rightTitle} unit={config.unit} dataByEntity={config.dataByEntity} onItemClick={onItemClick} selectedId={effectiveSelectedId} />;
@@ -94,15 +94,15 @@ export function VisualizationRenderer({ config, className, colorOffset = 0, onIt
     const listenerPoints = listenerItems && !Array.isArray(listenerItems)
       ? (listenerItems as { points?: QuotationTrendPoint[] }).points ?? []
       : undefined;
-    return <Trend points={listenerPoints ?? config.points} colorOffset={colorOffset} xLabel={config.xLabel} yLabel={config.yLabel} valuePrefix={config.valuePrefix} animationEnabled={config.animationEnabled} />;
+    return <Trend points={listenerPoints ?? config.points} colorOffset={colorOffset} xLabel={config.xLabel} yLabel={config.yLabel} valuePrefix={config.valuePrefix} numberSystem={config.numberSystem} animationEnabled={config.animationEnabled} />;
   }
   if (config.type === CHART_TYPE.WEEKLY_FLOW) {
     const items = listenerItems ? listenerItems as ContractorRow[] : config.items;
-    return <WeeklyFlow items={items} onItemClick={onItemClick} />;
+    return <WeeklyFlow items={items} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
   if (config.type === CHART_TYPE.HORIZONTAL_BAR) {
     const rows = listenerItems ? listenerItems as HorizontalBarRow[] : config.rows;
-    return <HorizontalBarChart rows={rows} valuePrefix={config.valuePrefix} onItemClick={onItemClick} />;
+    return <HorizontalBarChart rows={rows} valuePrefix={config.valuePrefix} numberSystem={config.numberSystem} onItemClick={onItemClick} />;
   }
 
   return <div className="viz-empty">Visualization unavailable</div>;

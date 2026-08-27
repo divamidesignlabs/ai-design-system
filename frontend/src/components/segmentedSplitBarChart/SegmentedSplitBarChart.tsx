@@ -8,6 +8,7 @@ import { CC, LEGEND_LABEL, CHART_VALUE, rgb, drawGlow, setupCanvas, AXIS_LABEL }
 import { useContainerWidth } from '../../canvas/useContainerWidth';
 import { ChartEmptyState } from '../common/ChartEmptyState';
 import { ToggleButton } from '../common/ToggleButton';
+import { NUMBER_SYSTEM } from '../../constants';
 import { formatNumber } from '../../utils/numberFormat';
 import type { VariationRow } from '../../types';
 import type { SegmentedSplitBarChartProps } from './types';
@@ -28,7 +29,8 @@ const PAIR_GAP   = 36;
 const PAD_T      = PAIR_GAP / 2;
 const PAD_B      = 48;
 
-export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, onItemClick, selectedId, labelA = 'Implemented', labelB = 'Unimplemented', unit = 'variations', testID }: SegmentedSplitBarChartProps) {
+export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, onItemClick, selectedId, labelA = 'Implemented', labelB = 'Unimplemented', unit = 'variations', numberSystem: rawNumberSystem, testID }: SegmentedSplitBarChartProps) {
+  const numberSystem = rawNumberSystem ?? NUMBER_SYSTEM.INTERNATIONAL;
   const [containerRef, W] = useContainerWidth(DEFAULT_W);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverMap = useRef(new Map<string, number>());
@@ -79,8 +81,8 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
     const maxLabelW = visible.reduce((acc, c) => Math.max(acc, ctx.measureText(c.abbreviation ?? c.name ?? '').width), 0);
     ctx.font = CHART_VALUE.font;
     const maxValW = visible.reduce((acc, c) => Math.max(acc,
-      ctx.measureText(formatNumber(c.implemented ?? 0)).width,
-      ctx.measureText(formatNumber(c.unimplemented ?? 0)).width,
+      ctx.measureText(formatNumber(c.implemented ?? 0, 1, numberSystem)).width,
+      ctx.measureText(formatNumber(c.unimplemented ?? 0, 1, numberSystem)).width,
     ), 0);
     const padL   = Math.max(Math.min(maxLabelW + 20, W * 0.3), 40);
     const padR   = Math.max(maxValW + 24, 32);
@@ -130,8 +132,8 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
         // Hit zone on name area — centerXOverride at bar tip for connector routing
         registerHitRect(hitZonesRef.current, implId, 0, pairY, padL, PAIR_H, {
           label: c.name ?? c.abbreviation ?? '',
-          value: `${formatNumber((c.implemented ?? 0) + (c.unimplemented ?? 0))} total ${unit}`,
-          sublabel: `${labelA}: ${formatNumber(c.implemented ?? 0)} · ${labelB}: ${formatNumber(c.unimplemented ?? 0)}`,
+          value: `${formatNumber((c.implemented ?? 0) + (c.unimplemented ?? 0), 1, numberSystem)} total ${unit}`,
+          sublabel: `${labelA}: ${formatNumber(c.implemented ?? 0, 1, numberSystem)} · ${labelB}: ${formatNumber(c.unimplemented ?? 0, 1, numberSystem)}`,
           color: CC.green,
         }, undefined, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
@@ -147,7 +149,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
           ctx.fill();
         }
         registerHitRect(hitZonesRef.current, implId, padL, yImpl, Math.max(implW, 1), BAR_H, {
-          label: c.name, value: formatNumber(c.implemented ?? 0), color: CC.green,
+          label: c.name, value: formatNumber(c.implemented ?? 0, 1, numberSystem), color: CC.green,
         }, pairY + PAIR_H / 2, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // Value label right of impl bar
@@ -158,7 +160,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
           ctx.fillStyle    = CC.t1;
           ctx.textAlign    = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(formatNumber(c.implemented ?? 0), padL + implW + 16, yImpl + BAR_H / 2);
+          ctx.fillText(formatNumber(c.implemented ?? 0, 1, numberSystem), padL + implW + 16, yImpl + BAR_H / 2);
           ctx.globalAlpha  = 1;
           ctx.textBaseline = 'alphabetic';
         }
@@ -175,7 +177,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
           ctx.fill();
         }
         registerHitRect(hitZonesRef.current, unimplId, padL, yUniml, Math.max(unimplW, 1), BAR_H, {
-          label: c.name, value: formatNumber(c.unimplemented ?? 0), color: CC.amber,
+          label: c.name, value: formatNumber(c.unimplemented ?? 0, 1, numberSystem), color: CC.amber,
         }, pairY + PAIR_H / 2, padL + Math.max(implW, unimplW) + 16 + maxValW + 14);
 
         // Value label right of uniml bar
@@ -186,7 +188,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
           ctx.fillStyle    = CC.t1;
           ctx.textAlign    = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(formatNumber(c.unimplemented ?? 0), padL + unimplW + 16, yUniml + BAR_H / 2);
+          ctx.fillText(formatNumber(c.unimplemented ?? 0, 1, numberSystem), padL + unimplW + 16, yUniml + BAR_H / 2);
           ctx.globalAlpha  = 1;
           ctx.textBaseline = 'alphabetic';
         }
@@ -236,7 +238,7 @@ export function SegmentedSplitBarChart({ items: rawItems = [], itemsByEntity, on
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [visible, H, W]);
+  }, [visible, H, W, numberSystem]);
 
   const isEmpty = items.length === 0;
   if (isEmpty) {

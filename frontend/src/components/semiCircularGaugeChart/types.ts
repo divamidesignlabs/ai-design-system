@@ -1,3 +1,4 @@
+import type { NumberSystem } from '../../constants';
 import type { SubentityPayload } from '../../types';
 
 export interface GaugeEntityData {
@@ -15,5 +16,6 @@ export interface SemiCircularGaugeChartProps {
   gaugeByEntity?: Record<string, GaugeEntityData>;
   onItemClick?: (id: string, label: string, subentity?: SubentityPayload) => void;
   subentity?: SubentityPayload;
+  numberSystem?: NumberSystem | null;
   testID?: string;
 }

@@ -1,6 +1,13 @@
 import type { SankeyLinkData, SankeyNodeData } from './types';
 import { isLightChartGround, subscribeThemeChange } from './canvas/canvasUtils';
 
+export const NUMBER_SYSTEM = {
+  INTERNATIONAL: 'international',
+  INDIAN: 'indian',
+} as const;
+
+export type NumberSystem = (typeof NUMBER_SYSTEM)[keyof typeof NUMBER_SYSTEM];
+
 export const PAGE = {
   PROJECT_DASHBOARD: 'project-dashboard',
   CHART_GALLERY: 'chart-gallery',

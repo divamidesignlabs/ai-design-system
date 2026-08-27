@@ -1,6 +1,6 @@
 {
   "name": "@divami-artefacts/ai-design-system",
-  "version": "1.0.68",
+  "version": "1.0.72",
   "type": "module",
   "license": "MIT",
   "module": "./dist/index.js",

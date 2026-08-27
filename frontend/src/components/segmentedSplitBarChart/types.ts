@@ -1,3 +1,4 @@
+import type { NumberSystem } from '../../constants';
 import type { VariationRow, SubentityPayload } from '../../types';
 
 export interface SegmentedSplitBarChartProps {
@@ -8,5 +9,6 @@ export interface SegmentedSplitBarChartProps {
   labelA?: string;
   labelB?: string;
   unit?: string;
+  numberSystem?: NumberSystem | null;
   testID?: string;
 }
